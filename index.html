@@ -1,0 +1,2257 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>顏氏精選價值成長分類帽 (V4.9 ARGON 跨年感知與四期自動補齊版)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --navy: #002B5E; --navy-hover: #001A38; --yellow: #FFCE00;
+            --bg: #F0F4F8; --card: #FFFFFF; --text: #1E293B; --muted: #64748B;
+            --red: #DC2626; --green: #16A34A; --blue: #2563EB; --orange: #EA580C; --purple: #7C3AED;
+            --border: #E2E8F0;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 12px; font-size: 14px; }
+        .app-shell { max-width: 1860px; margin: auto; background: var(--card); border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 16px 22px; position: relative; }
+
+        .topbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--yellow); padding-bottom: 12px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+        .brand { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .brand h1 { color: var(--navy); margin: 0; font-size: 22px; font-weight: 900; letter-spacing: 0.5px; }
+        .badge-ver { background: var(--navy); color: var(--yellow); padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+        .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+        .btn { border: none; padding: 7px 13px; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.15s; white-space: nowrap; }
+        .btn:active { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-navy { background: var(--navy); color: var(--yellow); }
+        .btn-navy:hover { background: var(--navy-hover); }
+        .btn-sync { background: linear-gradient(135deg, #059669, #10B981); color: white; box-shadow: 0 2px 6px rgba(16,185,129,0.3); }
+        .btn-sync:hover { filter: brightness(1.08); }
+        .btn-gold { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; box-shadow: 0 2px 6px rgba(245,158,11,0.3); }
+        .btn-outline { background: #F8FAFC; color: var(--navy); border: 1px solid #CBD5E1; }
+        .btn-outline:hover { background: #E2E8F0; }
+        .btn-danger { background: #FEE2E2; color: var(--red); }
+        .btn-danger:hover { background: var(--red); color: white; }
+
+        .vault-drawer { display: none; background: #F8FAFC; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+        .vault-drawer.open { display: block; animation: fadeIn 0.2s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+        .cloud-config-bar { display: flex; justify-content: space-between; align-items: center; background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; flex-wrap: wrap; gap: 10px; }
+        .cloud-input-group { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 280px; flex-wrap: wrap; }
+        .vault-grid { display: flex; flex-direction: column; gap: 8px; }
+        .vault-row { display: grid; grid-template-columns: 75px repeat(8, 1fr); gap: 6px; align-items: center; background: white; padding: 8px 10px; border-radius: 8px; border-left: 4px solid var(--navy); box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .vault-row.listed { border-left-color: var(--green); }
+        .vault-row.otc { border-left-color: var(--blue); }
+        .vault-mkt-title { font-weight: 900; color: var(--navy); font-size: 13px; }
+        .vault-cell { display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; padding: 5px 7px; border-radius: 6px; border: 1px solid #E2E8F0; }
+        .vault-cell-info { display: flex; flex-direction: column; overflow: hidden; }
+        .vault-cell-title { font-size: 11.5px; font-weight: 800; color: var(--text); }
+        .vault-status { font-size: 10px; font-weight: 800; margin-top: 2px; }
+        .vault-status.ok { color: var(--green); }
+        .vault-status.warn { color: var(--red); }
+        .vault-status.empty { color: var(--orange); }
+        input[type="file"] { display: none; }
+
+        .tactical-bar { background: var(--navy); color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
+        .tactical-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .input-ctrl, select.input-ctrl { padding: 6px 10px; border-radius: 6px; border: none; font-weight: 700; font-size: 13px; color: var(--navy); background: white; outline: none; }
+        .input-ctrl:focus { box-shadow: 0 0 0 2px var(--yellow); }
+        select.yoy-highlight { background: #FEF2F2; color: var(--red); border: 2px solid #FCA5A5; font-weight: 900; }
+        select.smooth-highlight { background: #F3E8FF; color: #6B21A8; border: 2px solid #D8B4FE; font-weight: 900; }
+
+        .scenario-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: rgba(0,0,0,0.22); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,206,0,0.3); }
+        .scenario-btn { background: rgba(255,255,255,0.1); color: #F8FAFC; border: 1px solid rgba(255,255,255,0.25); padding: 6px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 800; cursor: pointer; transition: 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+        .scenario-btn:hover { background: rgba(255,206,0,0.25); border-color: var(--yellow); color: white; }
+        .scenario-btn.active { background: var(--yellow); color: var(--navy); border-color: white; box-shadow: 0 0 12px rgba(255,206,0,0.6); }
+
+        .chip-group { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+        .chip { background: rgba(255,255,255,0.12); color: #E2E8F0; border: 1px solid rgba(255,255,255,0.15); padding: 5px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.15s; user-select: none; }
+        .chip:hover { background: rgba(255,255,255,0.22); color: white; }
+        .chip.active { background: var(--yellow); color: var(--navy); border-color: var(--yellow); box-shadow: 0 2px 6px rgba(255,206,0,0.35); }
+        .chip-yoy100 { background: rgba(220,38,38,0.25); color: #FECACA; border: 1px solid #F87171; }
+        .chip-yoy100.active { background: #DC2626 !important; color: white !important; border-color: #FEF08A !important; box-shadow: 0 0 10px rgba(220,38,38,0.6); }
+
+        .tabs-bar { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--navy); padding: 0 4px; }
+        .tabs-left { display: flex; gap: 6px; flex-wrap: wrap; }
+        .tab-btn { padding: 9px 18px; font-size: 14px; font-weight: 800; border: 2px solid transparent; border-bottom: none; border-radius: 8px 8px 0 0; cursor: pointer; background: #E2E8F0; color: var(--muted); margin-bottom: -2px; transition: 0.15s; }
+        .tab-btn.active { background: white; color: var(--navy); border-color: var(--navy); }
+        .stats-summary { font-size: 12px; font-weight: 700; color: var(--muted); padding-bottom: 6px; }
+
+        .table-wrap { overflow: auto; max-height: 66vh; min-height: 380px; border: 2px solid var(--navy); border-top: none; border-radius: 0 0 10px 10px; background: white; }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        th, td { padding: 9px 8px; border-bottom: 1px solid var(--border); text-align: right; font-size: 13.5px; vertical-align: middle; }
+        th { background: var(--navy); color: white; position: sticky; top: 0; z-index: 10; cursor: pointer; user-select: none; text-align: center; font-weight: 800; border-right: 1px solid rgba(255,255,255,0.08); }
+        th:hover { background: var(--navy-hover); color: var(--yellow); }
+        td.align-left, th.align-left { text-align: left; }
+        td.align-center { text-align: center; }
+        tbody tr:hover { background: #FEFCE8; }
+
+        .mkt-badge { display: inline-block; padding: 2px 5px; border-radius: 4px; color: white; font-weight: 800; font-size: 10px; margin-right: 4px; }
+        .mkt-badge.listed { background: var(--green); }
+        .mkt-badge.otc { background: var(--blue); }
+        .mkt-badge.fin { background: var(--purple); }
+        .tag { padding: 3px 8px; border-radius: 6px; font-weight: 800; font-size: 11.5px; color: white; display: inline-block; }
+        .tag-AA { background: var(--purple); } .tag-A { background: var(--blue); }
+        .tag-B { background: var(--green); } .tag-C-red { background: var(--red); }
+        .tag-C { background: #F59E0B; } .tag-none { background: #E2E8F0; color: var(--muted); font-weight: 600; }
+
+        .ai-note-badge { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 800; margin-right: 5px; }
+        .ai-note-struct { background: #DCFCE7; color: #15803D; border: 1px solid #86EFAC; }
+        .ai-note-once   { background: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; }
+        .ai-note-timing { background: #E0E7FF; color: #4338CA; border: 1px solid #C7D2FE; }
+
+        .period-sub-badge { font-size: 10px; background: #F3E8FF; color: #6B21A8; padding: 1px 4px; border-radius: 3px; font-weight: 800; display: inline-block; margin-top: 2px; }
+
+        .stock-name-btn { color: var(--navy); font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; border-bottom: 1px dashed var(--navy); padding-bottom: 1px; }
+        .stock-name-btn:hover { color: var(--red); border-color: var(--red); }
+        .btn-trend { background: #EFF6FF; color: var(--blue); border: 1px solid #BFDBFE; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer; }
+        .btn-trend:hover { background: var(--blue); color: white; }
+        .edit-num { width: 64px; text-align: right; font-weight: 800; font-size: 13.5px; color: var(--navy); background: transparent; border: 1px solid transparent; border-bottom: 1px dashed var(--yellow); padding: 2px 4px; border-radius: 4px; }
+        .edit-num:focus { outline: none; background: white; border-color: var(--red); }
+        .news-links { display: flex; gap: 3px; margin-top: 3px; opacity: 0.75; transition: 0.15s; }
+        tr:hover .news-links { opacity: 1; }
+        .news-a { text-decoration: none; font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; color: white; }
+
+        .note-trigger {
+            max-width: 195px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            cursor: pointer; color: #475569; font-size: 12.5px; padding: 3px 6px;
+            border-radius: 4px; border-bottom: 1px dashed #94A3B8; display: inline-block; vertical-align: middle;
+        }
+        .note-trigger:hover { background: #FEF08A; color: var(--navy); font-weight: 700; }
+        .global-note-popover {
+            display: none; position: fixed; z-index: 9999; width: 340px; max-width: 90vw;
+            background: #0F172A; color: #F8FAFC; padding: 12px 14px; border-radius: 10px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.35); border: 2px solid var(--yellow);
+            font-size: 13px; line-height: 1.55; white-space: normal; word-break: break-word;
+        }
+        .global-note-popover.show { display: block; animation: popFade 0.14s ease-out; }
+        @keyframes popFade { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
+        .popover-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px; margin-bottom: 8px; font-weight: 800; color: var(--yellow); font-size: 12.5px; }
+        .popover-close { background: transparent; border: none; color: #94A3B8; cursor: pointer; font-size: 14px; font-weight: 900; }
+
+        .prog-wrap { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+        .prog-bg { width: 65px; height: 8px; background: #E2E8F0; border-radius: 4px; overflow: hidden; }
+        .prog-fill { height: 100%; border-radius: 4px; }
+
+        .drawer-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 990; backdrop-filter: blur(2px); }
+        .drawer-backdrop.open { display: block; }
+        .rev-drawer { position: fixed; top: 0; right: -700px; width: 660px; max-width: 100vw; height: 100vh; background: white; z-index: 1000; box-shadow: -8px 0 30px rgba(0,0,0,0.2); display: flex; flex-direction: column; transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1); }
+        .rev-drawer.open { right: 0; }
+        .drawer-head { background: var(--navy); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid var(--yellow); }
+        .drawer-body { padding: 14px 20px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        
+        .mode-switch-bar { display: flex; background: #E2E8F0; padding: 4px; border-radius: 8px; gap: 4px; }
+        .mode-btn { flex: 1; border: none; background: transparent; padding: 7px 12px; border-radius: 6px; font-weight: 800; font-size: 13px; color: var(--muted); cursor: pointer; transition: 0.15s; }
+        .mode-btn.active { background: var(--navy); color: var(--yellow); box-shadow: 0 2px 6px rgba(0,43,94,0.25); }
+
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .kpi-card { background: #F8FAFC; border: 1px solid var(--border); border-radius: 8px; padding: 8px 8px; text-align: center; }
+        .kpi-label { font-size: 10.5px; color: var(--muted); font-weight: 700; }
+        .kpi-val { font-size: 14.5px; font-weight: 900; color: var(--navy); margin-top: 3px; }
+
+        .diag-banner { display: flex; flex-direction: column; gap: 6px; }
+        .diag-alert { padding: 8px 12px; border-radius: 8px; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .diag-alert.warn { background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+        .diag-alert.good { background: #F0FDF4; color: #15803D; border: 1px solid #BBF7D0; }
+        .diag-alert.info { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+        .diag-alert.purple { background: #FAF5FF; color: #6B21A8; border: 1px solid #E9D5FF; }
+
+        .chart-box { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px; height: 265px; position: relative; }
+        .mini-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .mini-table th { background: #F1F5F9; color: var(--navy); position: static; padding: 6px 8px; font-size: 12px; }
+        .mini-table td { padding: 6px 8px; border-bottom: 1px solid #F1F5F9; }
+
+        #mobileCardStage {
+            position: fixed; left: -9999px; top: 0; width: 450px;
+            background: linear-gradient(165deg, #0F172A 0%, #1E293B 100%);
+            color: #F8FAFC; border-radius: 16px; padding: 22px;
+            border: 3px solid var(--yellow); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        .mc-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid rgba(255,206,0,0.4); padding-bottom: 12px; margin-bottom: 12px; }
+        .mc-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 12px; }
+        .mc-box { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 9px 11px; }
+        .mc-lbl { font-size: 10.5px; color: #94A3B8; font-weight: 700; }
+        .mc-val { font-size: 16.5px; font-weight: 900; color: white; margin-top: 3px; }
+
+        .decoder-grid { display: none; gap: 18px; padding: 18px; border: 2px solid var(--navy); border-top: none; border-radius: 0 0 10px 10px; background: white; }
+        .decoder-grid.active { display: flex; flex-wrap: wrap; }
+        .dec-left { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 10px; }
+        .dec-right { flex: 1.8; min-width: 340px; display: flex; flex-direction: column; gap: 12px; }
+        .textarea-mops { width: 100%; min-height: 260px; flex: 1; padding: 12px; border: 2px dashed #CBD5E1; border-radius: 8px; font-family: monospace; resize: vertical; }
+        .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #1E293B; color: white; padding: 16px; border-radius: 8px; text-align: center; }
+
+        @media (max-width: 1200px) {
+            .vault-row { grid-template-columns: repeat(4, 1fr); }
+            .vault-mkt-title { grid-column: span 4; }
+        }
+        @media (max-width: 768px) {
+            .vault-row { grid-template-columns: 1fr 1fr; }
+            .vault-mkt-title { grid-column: span 2; }
+            .kpi-row { grid-template-columns: repeat(2, 1fr); }
+            .dash-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-shell" id="captureArea">
+    <!-- 頂部極簡導航 -->
+    <div class="topbar" data-html2canvas-ignore="true">
+        <div class="brand">
+            <h1>⚾ 顏氏精選價值成長分類帽</h1>
+            <span class="badge-ver">V4.9 ARGON 跨年感知與四期自動補齊版</span>
+            <span id="syncStatusBadge" style="font-size:12px; font-weight:700; color:var(--muted);">載入中...</span>
+        </div>
+        <div class="top-actions">
+            <button class="btn btn-sync" onclick="syncFromGAS(false)" id="btnCloudSync" title="透過您的 Google Apps Script 特工一鍵灌入上市櫃最新營收、股價、資本額與最新財報">⚡ GAS 雲端全庫同步</button>
+            <button class="btn btn-navy" onclick="toggleVaultDrawer()">🗄️ 彈藥庫管理 (<span id="vaultLoadedCount">0</span>/16)</button>
+            <button class="btn btn-outline" onclick="exportFullVaultJSON()">📦 匯出全庫</button>
+            <label class="btn btn-outline">📂 匯入全庫 <input type="file" accept=".json" onchange="importFullVaultJSON(event)"></label>
+            <button class="btn btn-outline" onclick="exportToImage()">📸 全表截圖</button>
+            <button class="btn btn-danger" onclick="clearAllData()">🗑️ 清空</button>
+        </div>
+    </div>
+
+    <!-- 摺疊式 16 槽彈藥庫與雲端設定抽屜 -->
+    <div class="vault-drawer" id="vaultDrawer" data-html2canvas-ignore="true">
+        <div class="cloud-config-bar">
+            <div class="cloud-input-group">
+                <span style="font-size:12.5px; font-weight:900; color:var(--navy);">🛰️ GAS 雲端特工網址：</span>
+                <input type="text" id="gasUrlInput" class="input-ctrl" style="border:1px solid #93C5FD; flex:1; min-width:240px; font-family:monospace; font-size:12px;" placeholder="貼上 https://script.google.com/macros/s/.../exec" onchange="saveCloudConfig()">
+                <button class="btn btn-sync" style="padding:5px 10px; font-size:12px;" onclick="syncFromGAS(false)">🔄 立即同步</button>
+                <label style="font-size:12px; font-weight:800; color:var(--navy); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                    <input type="checkbox" id="autoSyncToggle" checked onchange="saveCloudConfig()"> 開啟網頁時自動靜默同步
+                </label>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <span style="font-size:12px; font-weight:800; color:var(--navy);">🔑 FinMind Token (選填)：</span>
+                <input type="password" id="finmindTokenInput" class="input-ctrl" style="border:1px solid #CBD5E1; width:150px; font-size:12px;" placeholder="免填即可自動補齊四期財報" onchange="saveCloudConfig()">
+            </div>
+        </div>
+        <div style="font-size:12px; font-weight:800; color:var(--navy); margin-bottom:8px;">
+            📥 上市櫃 16 槽資料庫 <span style="font-weight:normal; color:var(--muted);">（V4.9 內建「跨年度保護鎖」：自動辨識財報年份如 `115Q2`、`114Q4`，僅在同年度內執行累計相減；未上傳 Q3/Q4 時點開個股抽屜亦會透過 FinMind 自動補齊四期損益！）</span>
+        </div>
+        <div class="vault-grid" id="vaultGrid"></div>
+    </div>
+
+    <!-- 三層戰術控制區 -->
+    <div class="tactical-bar" id="tacticalBar" data-html2canvas-ignore="true">
+        <div class="scenario-bar" id="scenarioBar">
+            <span style="font-size:12.5px; font-weight:900; color:var(--yellow);">🧭 戰術情境自駕劇本：</span>
+            <button class="scenario-btn active" data-scn="NONE" onclick="applyScenario('NONE')">🌐 全景自由檢視</button>
+            <button class="scenario-btn" data-scn="DAVIS" onclick="applyScenario('DAVIS')" title="AA或A股 + 預估EPS>0 + 本益比≤15倍 + 利潤空間≥30% + 排除一次性認列">🚀 戴維斯雙擊池 (高動能+低PE)</button>
+            <button class="scenario-btn" data-scn="VALUE" onclick="applyScenario('VALUE')" title="B股以上(YTD≥20%) + 淨利成長率≥20% + 本益比≤12倍">💎 價值低估成長 (穩健獲利擴張)</button>
+            <button class="scenario-btn" data-scn="TURNAROUND" onclick="applyScenario('TURNAROUND')" title="自動切換至浴火重生病房：鎖定甦醒進度≥80% + 單月YoY≥20%">🏥 病房即將出院 (甦醒≥80%+營收轉強)</button>
+            <button class="scenario-btn" data-scn="TRUE100" onclick="applyScenario('TRUE100')" title="當月年增YoY≥100% + 月增MoM≥20% + 排除一次性工程/交屋認列">🔥 真・單月暴力翻倍 (排除虛火)</button>
+        </div>
+
+        <div class="tactical-row">
+            <div class="filter-group">
+                <input type="text" id="searchInput" class="input-ctrl" style="width:140px;" placeholder="🔍 搜尋代號/名稱...">
+                <div class="chip-group" id="mktChips">
+                    <span class="chip active" data-mkt="ALL">全市場</span>
+                    <span class="chip" data-mkt="listed">🟢 上市</span>
+                    <span class="chip" data-mkt="otc">🔵 上櫃</span>
+                </div>
+                <select id="marginModeFilter" class="input-ctrl smooth-highlight" title="自動核對財報年份，同年度才進行累計相減，跨年度自動獨立保護">
+                    <option value="AUTO_LATEST">⚖️ 獲利基底: ⚡ 自動最新純季 (跨年智慧感知)</option>
+                    <option value="SMOOTH_2Q">⚖️ 獲利基底: 🤝 近兩季純季平滑平均</option>
+                    <option value="PURE_Q1">⚖️ 獲利基底: ① 純 Q1 (1~3月單季)</option>
+                    <option value="PURE_Q2">⚖️ 獲利基底: ② 純 Q2 (同年度 H1 扣 Q1)</option>
+                    <option value="PURE_Q3">⚖️ 獲利基底: ③ 純 Q3 (7~9月單季)</option>
+                    <option value="PURE_Q4">⚖️ 獲利基底: ④ 純 Q4 (同年度 全年 扣 前三季)</option>
+                    <option value="H1">⚖️ 獲利基底: ⑤ H1 上半年累計 (1~6月)</option>
+                    <option value="H2">⚖️ 獲利基底: ⑥ H2 下半年累計 (同年度 全年 扣 H1)</option>
+                </select>
+                <select id="aiNoteFilter" class="input-ctrl" title="依營收備註關鍵字自動定性過濾">
+                    <option value="ALL">💬 備註定性: 全部</option>
+                    <option value="STRUCT">🔥 僅看【結構性動能】</option>
+                    <option value="EXCLUDE_ONCE">🛡️ 排除【一次性認列(交屋/工程)】</option>
+                    <option value="ONCE">⚠️ 僅看【一次性認列】</option>
+                </select>
+                <select id="yoyFilter" class="input-ctrl yoy-highlight">
+                    <option value="ALL">🔥 當月年增(YoY): 全部</option>
+                    <option value="100">🔥 當月年增 YoY ≥ 100% (翻倍)</option>
+                    <option value="50">⚡ 當月年增 YoY > 50%</option>
+                    <option value="20">📈 當月年增 YoY ≥ 20%</option>
+                    <option value="0">🟢 當月年增 YoY > 0%</option>
+                </select>
+                <select id="industryFilter" class="input-ctrl"><option value="ALL">全產業板塊</option></select>
+                <select id="peFilter" class="input-ctrl">
+                    <option value="ALL">全本益比</option>
+                    <option value="0-12">PE ≤ 12倍</option>
+                    <option value="0-15">PE ≤ 15倍</option>
+                    <option value="15-25">PE 15 ~ 25倍</option>
+                    <option value="25-999">PE > 25倍</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label style="cursor:pointer; font-weight:800; font-size:13px; display:flex; align-items:center; gap:5px; color:var(--yellow);">
+                    <input type="checkbox" id="toggleShortlist"> ⭐ 自選 (<span id="shortlistCount">0</span>)
+                </label>
+                <label style="cursor:pointer; font-weight:700; font-size:13px; display:flex; align-items:center; gap:4px;">
+                    <input type="checkbox" id="toggleNote" checked> 備註
+                </label>
+                <button class="btn btn-outline" style="padding:5px 10px; font-size:12px;" onclick="exportCurrentTableCSV()">📥 匯出 CSV</button>
+            </div>
+        </div>
+
+        <div class="tactical-row" style="border-top:1px solid rgba(255,255,255,0.12); padding-top:8px;">
+            <div class="chip-group">
+                <span style="font-size:12px; font-weight:800; color:var(--yellow); margin-right:2px;">🎯 獨立快篩：</span>
+                <span id="btnYoy100Quick" class="chip chip-yoy100" onclick="toggleYoy100Quick()">🔥 當月翻倍 (YoY≥100%)</span>
+                <span style="opacity:0.3; margin:0 4px;">|</span>
+                <div class="chip-group" id="tagChips">
+                    <span class="chip active" data-tag="ALL">全動能</span>
+                    <span class="chip" data-tag="CLASSIFIED">⚡ 僅列強勢股</span>
+                    <span class="chip" data-tag="QOQ20">📈 季營收強增 (QoQ≥20%)</span>
+                    <span class="chip" data-tag="AA 股" title="YoY ≥ 100% 且 YTD ≥ 100%">🟣 AA 股</span>
+                    <span class="chip" data-tag="A 股" title="YoY ≥ 20% 且 YTD ≥ 20%">🔵 A 股</span>
+                    <span class="chip" data-tag="B 股" title="YTD ≥ 20%">🟢 B 股</span>
+                    <span class="chip" data-tag="紅色 C 股" title="YoY > 50%">🔴 紅色 C 股</span>
+                    <span class="chip" data-tag="C 股" title="YoY ≥ 20%">🟡 C 股</span>
+                </div>
+            </div>
+            <div class="chip-group" id="comaChips" style="display:none;">
+                <span style="font-size:12px; font-weight:800; color:#FCA5A5; margin-right:4px;">🏥 甦醒進度：</span>
+                <span class="chip active" data-coma="ALL">全進度</span>
+                <span class="chip" data-coma="AWAKE">🟢 即將甦醒 (≥80%)</span>
+                <span class="chip" data-coma="MILD">🟡 輕度昏迷 (60~79%)</span>
+                <span class="chip" data-coma="SEVERE">🔴 嚴重昏迷 (<60%)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 三大戰術分頁 Tabs -->
+    <div class="tabs-bar" data-html2canvas-ignore="true">
+        <div class="tabs-left">
+            <button id="tab-main" class="tab-btn active" onclick="switchTab('main')">🏆 價值成長狙擊 (全景全市場: <span id="cnt-main">0</span>)</button>
+            <button id="tab-turnaround" class="tab-btn" onclick="switchTab('turnaround')">🏥 浴火重生病房 (虧損轉機: <span id="cnt-turn">0</span>)</button>
+            <button id="tab-earlybird" class="tab-btn" onclick="switchTab('earlybird')" style="color:var(--orange);">🕵️ 財報早鳥解碼器</button>
+        </div>
+        <div class="stats-summary">💡 免手動補齊 Q3/Q4：點開個股抽屜時，系統會透過 FinMind 自動抓回該股近 6 季完整單季損益表，動態補齊四期純益率！</div>
+    </div>
+
+    <!-- 統一資料驅動表格容器 -->
+    <div class="table-wrap" id="tableWrap">
+        <table id="unifiedTable">
+            <thead id="unifiedThead"></thead>
+            <tbody id="unifiedTbody">
+                <tr><td colspan="15" class="align-center" style="padding:50px; color:var(--muted); font-weight:700;">請貼上上方「🛰️ GAS 雲端特工網址」一鍵同步，或手動上傳 CSV / 匯入全庫</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 🕵️ 財報早鳥解碼器容器 -->
+    <div class="decoder-grid" id="earlybirdWrap">
+        <div class="dec-left">
+            <h3 style="margin:0; color:var(--navy);">📝 1. 貼上公開資訊觀測站財報新聞稿</h3>
+            <textarea id="mopsText" class="textarea-mops" placeholder="請將新聞稿全文貼在此處，系統將自動提取金額並比對歷史基底..."></textarea>
+            <button class="btn btn-navy" style="justify-content:center; padding:12px; font-size:15px;" onclick="parseMopsText()">⚙️ 自動辨識解碼</button>
+        </div>
+        <div class="dec-right">
+            <div style="display:flex; gap:10px; align-items:center; background:#F8FAFC; padding:12px; border-radius:8px; border:1px solid var(--border); flex-wrap:wrap;">
+                <label style="font-weight:800; color:var(--navy);">🎯 股票代號：</label>
+                <input type="text" id="eb-id" class="input-ctrl" style="border:1px solid #CBD5E1; width:95px; text-align:center; color:var(--red); font-size:15px;" placeholder="如 2330" onchange="fetchPrevQBase()">
+                <label style="font-weight:800; color:var(--navy);">🛡️ 扣除基底：</label>
+                <select id="ebBaseType" class="input-ctrl" style="border:1px solid #CBD5E1;" onchange="fetchPrevQBase()">
+                    <option value="Q1">扣除【Q1 財報 (1~3月)】(算純Q2用)</option>
+                    <option value="H1">扣除【Q2 財報 (H1累計)】(算純Q3或H2用)</option>
+                    <option value="Q3_CUM">扣除【前三季累計 (1~9月)】(算純Q4用)</option>
+                </select>
+                <span id="eb-prev-status" style="font-size:12px; font-weight:800; color:var(--orange);">尚未比對基底</span>
+            </div>
+            <table class="mini-table" style="border:1px solid var(--border);">
+                <thead>
+                    <tr><th>財報項目</th><th>新聞公告累計數</th><th>累計率</th><th>- 歷史扣除基底</th><th>基底率</th><th style="color:var(--red);">= 純當季絕對值</th><th style="color:var(--blue);">純當季率</th></tr>
+                </thead>
+                <tbody id="ebTbody">
+                    <tr><td style="font-weight:800; text-align:center;">營業收入</td><td><input type="number" id="eb-in-rev" class="edit-num" style="width:100%;" oninput="calcEB()"></td><td id="eb-pct-in-rev">100%</td><td id="eb-base-rev">0</td><td id="eb-pct-base-rev">100%</td><td id="eb-pure-rev" style="font-weight:800; color:var(--purple);">0</td><td>100%</td></tr>
+                    <tr><td style="font-weight:800; text-align:center;">營業毛利</td><td><input type="number" id="eb-in-gp" class="edit-num" style="width:100%;" oninput="calcEB()"></td><td id="eb-pct-in-gp">0%</td><td id="eb-base-gp">0</td><td id="eb-pct-base-gp">0%</td><td id="eb-pure-gp" style="font-weight:800; color:var(--purple);">0</td><td id="eb-pct-gp" style="font-weight:800; color:var(--blue);">0%</td></tr>
+                    <tr><td style="font-weight:800; text-align:center;">營業利益</td><td><input type="number" id="eb-in-op" class="edit-num" style="width:100%;" oninput="calcEB()"></td><td id="eb-pct-in-op">0%</td><td id="eb-base-op">0</td><td id="eb-pct-base-op">0%</td><td id="eb-pure-op" style="font-weight:800; color:var(--purple);">0</td><td id="eb-pct-op" style="font-weight:800; color:var(--blue);">0%</td></tr>
+                    <tr><td style="font-weight:800; text-align:center;">稅前淨利</td><td><input type="number" id="eb-in-pre" class="edit-num" style="width:100%;" oninput="calcEB()"></td><td id="eb-pct-in-pre">0%</td><td id="eb-base-pre">0</td><td id="eb-pct-base-pre">0%</td><td id="eb-pure-pre" style="font-weight:800; color:var(--purple);">0</td><td id="eb-pct-pre" style="font-weight:800; color:var(--blue);">0%</td></tr>
+                    <tr><td style="font-weight:800; text-align:center;">本期淨利</td><td><input type="number" id="eb-in-net" class="edit-num" style="width:100%;" oninput="calcEB()"></td><td id="eb-pct-in-net">0%</td><td id="eb-base-net">0</td><td id="eb-pct-base-net">0%</td><td id="eb-pure-net" style="font-weight:800; color:var(--purple);">0</td><td id="eb-pct-net" style="font-weight:800; color:var(--blue);">0%</td></tr>
+                </tbody>
+            </table>
+            <div class="dash-grid">
+                <div><div style="font-size:12px; color:#CBD5E1;">當季純毛利率</div><div id="eb-val-gm" style="font-size:22px; font-weight:900; color:var(--yellow); margin:4px 0;">-</div><div id="eb-cmp-gm" style="font-size:12px;">vs 基底: -</div></div>
+                <div><div style="font-size:12px; color:#CBD5E1;">純當季本業淨利 (方法B)</div><div id="eb-val-core" style="font-size:22px; font-weight:900; color:white; margin:4px 0;">-</div><div id="eb-cmp-core" style="font-size:12px;">vs 基底: -</div></div>
+                <div><div style="font-size:12px; color:#FCA5A5;">🔥 本業淨利爆發季增率</div><div id="eb-val-growth" style="font-size:24px; font-weight:900; color:#4ADE80; margin:4px 0;">-</div><div style="font-size:11px; color:#94A3B8;">(當季 - 基底) / |基底|</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 📝 全域防裁切「營收備註浮動視窗」 -->
+<div id="notePopover" class="global-note-popover" data-html2canvas-ignore="true">
+    <div class="popover-header">
+        <span id="notePopoverTitle">📝 營收備註全文</span>
+        <button class="popover-close" onclick="hideNotePopover(true)">✕</button>
+    </div>
+    <div id="notePopoverAiTag" style="margin-bottom:6px;"></div>
+    <div id="notePopoverBody"></div>
+</div>
+
+<!-- 📊 右側滑出：個股 24M/8Q 營收 + 估值區間/PB + 四期財報自動補齊 + 手機圖卡匯出 -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeRevDrawer()"></div>
+<div class="rev-drawer" id="revDrawer">
+    <div class="drawer-head">
+        <div>
+            <div id="drawerStockTitle" style="font-size:18px; font-weight:900;">2330 台積電</div>
+            <div id="drawerStockSub" style="font-size:12px; color:var(--yellow); margin-top:2px;">月營收動能、季度 QoQ、PE區間/PB 與 FinMind 四期財報自動補齊</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+            <button class="btn btn-gold" style="padding:6px 11px; font-size:12px;" onclick="exportMobileStockCard()">📱 產出手機戰情卡</button>
+            <button class="btn btn-danger" style="padding:6px 10px;" onclick="closeRevDrawer()">✕</button>
+        </div>
+    </div>
+    <div class="drawer-body">
+        <div class="mode-switch-bar">
+            <button id="btnModeMonth" class="mode-btn active" onclick="switchDrawerMode('month')">📅 近 24 個月營收趨勢 (MoM / YoY)</button>
+            <button id="btnModeQuarter" class="mode-btn" onclick="switchDrawerMode('quarter')">📊 近 8 季營收比較 (QoQ 季增減 / 季年增)</button>
+        </div>
+
+        <div class="diag-banner" id="drawerDiagBanner"></div>
+
+        <div class="kpi-row">
+            <div class="kpi-card"><div class="kpi-label" id="d-kpi-lbl-1">最新單月營收</div><div class="kpi-val" id="d-kpi-rev">-</div></div>
+            <div class="kpi-card"><div class="kpi-label" id="d-kpi-lbl-2">最新 YoY / MoM</div><div class="kpi-val" id="d-kpi-yoy" style="font-size:13.5px;">-</div></div>
+            <div class="kpi-card"><div class="kpi-label" id="d-kpi-lbl-3">20MA 月線 / 乖離</div><div class="kpi-val" id="d-kpi-tech" style="font-size:13.5px;">計算中...</div></div>
+            <div class="kpi-card"><div class="kpi-label" id="d-kpi-lbl-4">PB 淨值比 / 1Y PE區間</div><div class="kpi-val" id="d-kpi-val" style="font-size:13px; color:var(--purple);">調閱中...</div></div>
+        </div>
+        <div class="chart-box">
+            <canvas id="revChartCanvas"></canvas>
+        </div>
+        <div style="font-size:12px; font-weight:800; color:var(--navy); display:flex; justify-content:space-between; align-items:center;">
+            <span id="drawerTableTitle">📅 近 12 個月歷史明細（單位：億元）</span>
+            <span id="drawerChartLegendHint" style="color:var(--orange);">👑 金色柱體 = 創區間新高</span>
+        </div>
+        <div style="overflow-x:auto; border:1px solid var(--border); border-radius:8px;">
+            <table class="mini-table">
+                <thead id="drawerRevThead"></thead>
+                <tbody id="drawerRevTbody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- 📱 隱藏的直式手機戰情小圖卡渲染舞台 -->
+<div id="mobileCardStage">
+    <div class="mc-header">
+        <div>
+            <div style="font-size:11px; color:var(--yellow); font-weight:800; letter-spacing:1px;">⚾ 顏氏價值成長分類帽 V4.9</div>
+            <div id="mc-title" style="font-size:22px; font-weight:900; margin-top:2px;">2330 台積電</div>
+            <div id="mc-sub" style="font-size:12px; color:#CBD5E1; margin-top:2px;">半導體業 ｜ 上市</div>
+        </div>
+        <div id="mc-tag" class="tag tag-AA" style="font-size:13px; padding:5px 10px;">AA 股</div>
+    </div>
+    <div class="mc-grid">
+        <div class="mc-box"><div class="mc-lbl">當前股價 ➔ 目標估價</div><div class="mc-val" id="mc-price">-</div></div>
+        <div class="mc-box"><div class="mc-lbl">潛在利潤空間 / 預估PE</div><div class="mc-val" id="mc-space" style="color:#4ADE80;">-</div></div>
+        <div class="mc-box"><div class="mc-lbl" id="mc-eps-lbl">預估全年 EPS / 純益率</div><div class="mc-val" id="mc-eps">-</div></div>
+        <div class="mc-box"><div class="mc-lbl">最新營收 YoY / 累計 YTD</div><div class="mc-val" id="mc-yoy" style="font-size:14.5px;">-</div></div>
+        <div class="mc-box"><div class="mc-lbl">股價淨值比 (PB) / 殖利率</div><div class="mc-val" id="mc-pb" style="color:#FBBF24; font-size:15px;">-</div></div>
+        <div class="mc-box"><div class="mc-lbl">近一年官方 PE 區間 / 位階</div><div class="mc-val" id="mc-perange" style="color:#C084FC; font-size:14.5px;">-</div></div>
+    </div>
+    <div id="mc-alerts" style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;"></div>
+    <div style="background:white; border-radius:10px; padding:10px; margin-bottom:12px;">
+        <img id="mc-chart-img" style="width:100%; height:auto; display:block;" alt="趨勢圖">
+    </div>
+    <div style="background:rgba(255,255,255,0.06); border-radius:8px; padding:10px 12px; font-size:12px; line-height:1.5; color:#E2E8F0;">
+        <div style="color:var(--yellow); font-weight:800; margin-bottom:3px;" id="mc-note-title">📝 營收備註定性：</div>
+        <div id="mc-note-body">-</div>
+    </div>
+    <div style="text-align:right; font-size:10px; color:#64748B; margin-top:10px;" id="mc-foot">ARGON 量化戰情引擎產出</div>
+</div>
+
+<script>
+/**
+ * ⚡ V4.9 ARGON 跨年感知與四期財報自動對位引擎
+ */
+const MARKETS = [
+    { id: 'listed', title: '🟢 上市', cls: 'listed' },
+    { id: 'otc',    title: '🔵 上櫃', cls: 'otc' }
+];
+const CATEGORIES = [
+    { key: 'price', name: '股價表' },
+    { key: 'rev',   name: '本月營收' },
+    { key: 'q1',    name: 'Q1財報(3M)' },
+    { key: 'q2',    name: 'Q2財報(H1)' },
+    { key: 'q3',    name: 'Q3財報(9M)' },
+    { key: 'q4',    name: 'Q4年報(12M)' },
+    { key: 'cap',   name: '資本額' },
+    { key: 'revly', name: '去年底營收' }
+];
+const STORAGE_KEYS = {};
+MARKETS.forEach(m => CATEGORIES.forEach(c => { STORAGE_KEYS[`${c.key}_${m.id}`] = `val_data_${c.key}_${m.id}`; }));
+
+const stockMap = new Map();
+const revHistoryCache  = new Map();
+const techHistoryCache = new Map();
+const valHistoryCache  = new Map();
+const finStmtCache     = new Set(); // 紀錄已透過 FinMind 自動補齊過四期財報的個股
+const slotRowCounts = {};
+const slotMetaTags  = {}; // 紀錄每個財報槽位的「真實年份季度」標籤 (如 115Q2)
+
+let state = {
+    tab: 'main', mkt: 'ALL', tag: 'ALL', yoyMin: 'ALL', coma: 'ALL', ind: 'ALL', pe: 'ALL',
+    marginMode: 'AUTO_LATEST', aiNote: 'ALL', scenario: 'NONE',
+    search: '', shortlistOnly: false, showNote: true,
+    sort: { main: { col: 'id', asc: true }, turnaround: { col: 'progressPct', asc: false } }
+};
+let drawerState = { currentId: null, mode: 'month' };
+let notePinned = false;
+
+let selectedStocks = new Set(JSON.parse(localStorage.getItem('val_shortlist') || '[]'));
+let priceOverrides = JSON.parse(localStorage.getItem('val_price_overrides') || '{}');
+let epsOverrides   = JSON.parse(localStorage.getItem('val_eps_overrides') || '{}');
+let revChartInstance = null;
+
+const esc = (s) => typeof s === 'string' ? s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])) : s;
+const toNum = (v) => {
+    if (v === undefined || v === null || v === '' || v === '-' || v === '--' || v === '---' || v === '#DIV/0!' || v === 'N/A') return 0;
+    const s = String(v).replace(/,/g, '').trim();
+    if (/^\([\d\.]+\)$/.test(s)) return -parseFloat(s.slice(1, -1)) || 0;
+    const n = parseFloat(s);
+    return isNaN(n) ? 0 : n;
+};
+const cleanID = (v) => String(v || '').replace(/['"=\s]/g, '').trim();
+const normHeader = (h) => String(h || '').replace(/\s+/g, '').replace(/（/g, '(').replace(/）/g, ')');
+
+function classifyRevenueNote(noteStr, industryStr = '') {
+    const txt = String(noteStr || '').trim();
+    if (!txt || txt === '-') return { type: 'NONE', label: '', cls: '' };
+    if (/完工|交屋|建案|過戶|入帳|工程款|驗收|處分|賠償|補償|罰款|業外|一次性|里程碑|授權金/.test(txt) || (industryStr.includes('建材營造') && /增加|認列/.test(txt))) {
+        return { type: 'ONCE', label: '⚠️ 一次性認列', cls: 'ai-note-once' };
+    }
+    if (/新產能|產能開出|滿載|拉貨|需求強|新產品|新機|訂單增加|出貨增加|市佔|擴產|量產|旺季|成長動能|需求成長|客戶需求增加/.test(txt)) {
+        return { type: 'STRUCT', label: '🔥 結構動能', cls: 'ai-note-struct' };
+    }
+    if (/遞延|船期|工作天數|基期|歲修|停工|過年|春節|匯率/.test(txt)) {
+        return { type: 'TIMING', label: '⏳ 期差/基期', cls: 'ai-note-timing' };
+    }
+    return { type: 'NONE', label: '', cls: '' };
+}
+
+function resolveFileColKey(sampleRow, exactList = [], includesList = []) {
+    if (!sampleRow) return null;
+    const rawKeys = Object.keys(sampleRow);
+    const normMap = rawKeys.map(k => ({ raw: k, norm: normHeader(k) }));
+    for (const ex of exactList) {
+        const nEx = normHeader(ex);
+        const found = normMap.find(item => item.norm === nEx);
+        if (found) return found.raw;
+    }
+    for (const inc of includesList) {
+        const nMust = normHeader(inc.must);
+        const nNot  = inc.not ? normHeader(inc.not) : null;
+        const found = normMap.find(item => item.norm.includes(nMust) && (!nNot || !item.norm.includes(nNot)));
+        if (found) return found.raw;
+    }
+    return null;
+}
+
+/**
+ * 🕵️ 從原始 CSV 頂部說明列或檔名，自動探測該份財報的「民國年份 (如 114、115)」與「季別 (1~4)」
+ */
+function detectCSVYearQuarter(rawText, filename = '', fallbackQ = null) {
+    const headLines = String(rawText || '').slice(0, 600);
+    const combined = `${filename} ${headLines}`;
+    let yr = null, q = fallbackQ;
+
+    // 探測民國年 (如 113年、114年、115年 或 114Q2)
+    const yrMatch = combined.match(/(11[2-9]|12\d)\s*[年Q季\/]/i) || combined.match(/(202[3-9])\s*[年Q季\/-]/i);
+    if (yrMatch) {
+        let yNum = parseInt(yrMatch[1], 10);
+        if (yNum > 1911) yNum -= 1911;
+        yr = yNum;
+    }
+    // 探測季別
+    const qMatch = combined.match(/第\s*([1-4一二三四])\s*季/) || combined.match(/Q([1-4])/i);
+    if (qMatch) {
+        const qMap = { '1':1, '2':2, '3':3, '4':4, '一':1, '二':2, '三':3, '四':4 };
+        q = qMap[qMatch[1]] || fallbackQ;
+    }
+    return { yr, q };
+}
+
+function extractCleanCSVBody(rawText) {
+    const lines = String(rawText || '').replace(/^\uFEFF/, '').split(/\r?\n/);
+    let headerIdx = 0;
+    for (let i = 0; i < Math.min(25, lines.length); i++) {
+        const line = lines[i];
+        const commaCount = (line.match(/,/g) || []).length;
+        if (commaCount >= 2 && (
+            line.includes('代號') || line.includes('代碼') || line.includes('Code') ||
+            (line.includes('名稱') && (line.includes('營收') || line.includes('收入') || line.includes('收盤') || line.includes('資本額')))
+        )) {
+            headerIdx = i;
+            break;
+        }
+    }
+    return lines.slice(headerIdx).join('\n');
+}
+
+// 1. 初始化彈藥庫 UI (16槽)
+function initVaultUI() {
+    const grid = document.getElementById('vaultGrid');
+    grid.innerHTML = MARKETS.map(m => `
+        <div class="vault-row ${m.cls}">
+            <div class="vault-mkt-title">${m.title}</div>
+            ${CATEGORIES.map(c => {
+                const k = `${c.key}_${m.id}`;
+                return `<div class="vault-cell">
+                    <div class="vault-cell-info">
+                        <span class="vault-cell-title">${c.name}</span>
+                        <span id="st-${k}" class="vault-status empty">未載入</span>
+                    </div>
+                    <div style="display:flex; gap:2px;">
+                        <label class="btn btn-navy" style="padding:3px 6px; font-size:10.5px;">上傳<input type="file" accept=".csv" onchange="uploadCSV(event, '${k}')"></label>
+                        <button class="btn btn-danger" style="padding:3px 5px; font-size:10.5px;" onclick="removeCSV('${k}')">✕</button>
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    `).join('');
+    document.getElementById('gasUrlInput').value = localStorage.getItem('val_gas_url') || '';
+    document.getElementById('finmindTokenInput').value = localStorage.getItem('val_finmind_token') || '';
+    document.getElementById('autoSyncToggle').checked = localStorage.getItem('val_auto_sync') !== 'false';
+}
+
+function toggleVaultDrawer() { document.getElementById('vaultDrawer').classList.toggle('open'); }
+function saveCloudConfig() {
+    localStorage.setItem('val_gas_url', document.getElementById('gasUrlInput').value.trim());
+    localStorage.setItem('val_finmind_token', document.getElementById('finmindTokenInput').value.trim());
+    localStorage.setItem('val_auto_sync', document.getElementById('autoSyncToggle').checked ? 'true' : 'false');
+}
+
+async function refreshVaultBadges() {
+    let loaded = 0;
+    for (const k in STORAGE_KEYS) {
+        const el = document.getElementById(`st-${k}`);
+        const has = await localforage.getItem(STORAGE_KEYS[k]);
+        if (has) {
+            loaded++;
+            const cnt = slotRowCounts[k];
+            const meta = slotMetaTags[k] || '';
+            const fname = await localforage.getItem(`val_filename_${k}`) || '已載入';
+            if (el) {
+                if (cnt !== undefined && cnt === 0) {
+                    el.innerText = `⚠️ 異常(0筆)`;
+                    el.className = 'vault-status warn';
+                } else {
+                    const cntStr = cnt !== undefined ? `${cnt}筆` : 'OK';
+                    el.innerText = `✅ ${meta ? meta + ' ' : ''}(${cntStr})`;
+                    el.title = `檔案：${fname}`;
+                    el.className = 'vault-status ok';
+                }
+            }
+        } else if (el) {
+            el.innerText = '未載入'; el.className = 'vault-status empty';
+        }
+    }
+    document.getElementById('vaultLoadedCount').innerText = loaded;
+    if (loaded === 0 && !localStorage.getItem('val_gas_url')) document.getElementById('vaultDrawer').classList.add('open');
+}
+
+// 2. GAS 雲端同步
+async function syncFromGAS(silentMode = false) {
+    saveCloudConfig();
+    let gasUrl = localStorage.getItem('val_gas_url') || '';
+    if (!gasUrl) {
+        if (!silentMode) {
+            document.getElementById('vaultDrawer').classList.add('open');
+            document.getElementById('gasUrlInput').focus();
+            alert('🛰️ 請先貼上您的 Google Apps Script (GAS) 網址！');
+        }
+        return;
+    }
+
+    const btn = document.getElementById('btnCloudSync');
+    const origText = btn.innerHTML;
+    btn.innerHTML = silentMode ? '⏳ 背景同步中...' : '⏳ GAS 特工正在抓取全庫...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(gasUrl, { method: 'GET', redirect: 'follow' });
+        if (!res.ok) throw new Error(`HTTP 狀態碼 ${res.status}`);
+        const data = await res.json();
+        if (data.status !== 'ok' || !data.vault) throw new Error(data.message || '回傳資料結構異常');
+
+        let count = 0;
+        for (const key in data.vault) {
+            if (STORAGE_KEYS[key] && data.vault[key]) {
+                await localforage.setItem(STORAGE_KEYS[key], extractCleanCSVBody(data.vault[key]));
+                await localforage.setItem(`val_filename_${key}`, '⚡GAS同步');
+                count++;
+            }
+        }
+        priceOverrides = {};
+        localStorage.removeItem('val_price_overrides');
+        localStorage.setItem('val_last_gas_sync_ts', String(Date.now()));
+
+        await buildMarketEngine();
+        await refreshVaultBadges();
+        if (!silentMode) alert(`🎉 GAS 雲端同步完成！已自動更新 ${count} 個核心資料庫。`);
+    } catch (err) {
+        if (!silentMode) alert(`❌ GAS 雲端同步失敗：${err.message}`);
+    } finally {
+        btn.innerHTML = origText;
+        btn.disabled = false;
+    }
+}
+
+// 3. 本地 CSV 手動上傳與管理 (含年份與季別自動探測記憶)
+function uploadCSV(e, key) {
+    const file = e.target.files[0]; if (!file) return;
+    if (key.startsWith('price')) { priceOverrides = {}; localStorage.removeItem('val_price_overrides'); }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const txt = ev.target.result;
+        if (txt.includes('\uFFFD')) {
+            const rBig5 = new FileReader();
+            rBig5.onload = (ev2) => saveCSVText(key, ev2.target.result, file.name);
+            rBig5.readAsText(file, 'big5');
+        } else { saveCSVText(key, txt, file.name); }
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+}
+
+async function saveCSVText(key, rawText, filename) {
+    // 在去除頂部說明列前，先探測該 CSV 說明列是否寫了「114年第3季」等年份資訊並保存
+    const meta = detectCSVYearQuarter(rawText, filename);
+    if (meta.yr) await localforage.setItem(`val_meta_yr_${key}`, String(meta.yr));
+    const clean = extractCleanCSVBody(rawText);
+    await localforage.setItem(STORAGE_KEYS[key], clean);
+    await localforage.setItem(`val_filename_${key}`, filename);
+    await buildMarketEngine();
+    await refreshVaultBadges();
+}
+
+async function removeCSV(key) {
+    delete slotRowCounts[key];
+    delete slotMetaTags[key];
+    await localforage.removeItem(STORAGE_KEYS[key]);
+    await localforage.removeItem(`val_filename_${key}`);
+    await localforage.removeItem(`val_meta_yr_${key}`);
+    await buildMarketEngine();
+    await refreshVaultBadges();
+}
+
+async function clearAllData() {
+    if (!confirm('🚨 確定要清空所有本地資料庫與自選紀錄嗎？（GAS 網址與 Token 將為您保留）')) return;
+    const savedGas = localStorage.getItem('val_gas_url') || '';
+    const savedToken = localStorage.getItem('val_finmind_token') || '';
+    localStorage.clear();
+    if (savedGas) localStorage.setItem('val_gas_url', savedGas);
+    if (savedToken) localStorage.setItem('val_finmind_token', savedToken);
+    await localforage.clear();
+    location.reload();
+}
+
+// 4. 跨裝置一鍵全庫打包
+async function exportFullVaultJSON() {
+    const dump = {
+        version: '4.9', timestamp: new Date().toISOString(), storage: {},
+        shortlist: [...selectedStocks], priceOverrides, epsOverrides,
+        gasUrl: localStorage.getItem('val_gas_url') || '',
+        finmindToken: localStorage.getItem('val_finmind_token') || ''
+    };
+    for (const k in STORAGE_KEYS) {
+        const val = await localforage.getItem(STORAGE_KEYS[k]);
+        const fn  = await localforage.getItem(`val_filename_${k}`);
+        const yr  = await localforage.getItem(`val_meta_yr_${k}`);
+        if (val) dump.storage[k] = { csv: val, filename: fn, metaYr: yr };
+    }
+    const blob = new Blob([JSON.stringify(dump)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `分類帽V4.9全庫備份_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+}
+
+function importFullVaultJSON(e) {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+        try {
+            const dump = JSON.parse(ev.target.result);
+            if (!dump.storage) throw new Error('格式不符');
+            for (const k in dump.storage) {
+                if (STORAGE_KEYS[k]) {
+                    await localforage.setItem(STORAGE_KEYS[k], extractCleanCSVBody(dump.storage[k].csv));
+                    await localforage.setItem(`val_filename_${k}`, dump.storage[k].filename || '匯入檔');
+                    if (dump.storage[k].metaYr) await localforage.setItem(`val_meta_yr_${k}`, String(dump.storage[k].metaYr));
+                }
+            }
+            if (dump.shortlist) { selectedStocks = new Set(dump.shortlist); localStorage.setItem('val_shortlist', JSON.stringify([...selectedStocks])); }
+            if (dump.priceOverrides) { priceOverrides = dump.priceOverrides; localStorage.setItem('val_price_overrides', JSON.stringify(priceOverrides)); }
+            if (dump.epsOverrides) { epsOverrides = dump.epsOverrides; localStorage.setItem('val_eps_overrides', JSON.stringify(epsOverrides)); }
+            if (dump.gasUrl) { localStorage.setItem('val_gas_url', dump.gasUrl); document.getElementById('gasUrlInput').value = dump.gasUrl; }
+            if (dump.finmindToken) { localStorage.setItem('val_finmind_token', dump.finmindToken); document.getElementById('finmindTokenInput').value = dump.finmindToken; }
+            await buildMarketEngine();
+            await refreshVaultBadges();
+            alert('✅ 跨裝置全庫還原成功！');
+        } catch (err) { alert('❌ 匯入失敗：' + err.message); }
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+}
+
+// 5. 核心資料關聯與「跨年智慧保護鎖」6 大期間拆解引擎
+function parseCSV(str) {
+    const cleanStr = extractCleanCSVBody(str);
+    return new Promise(res => Papa.parse(cleanStr, { header: true, skipEmptyLines: true, complete: r => res(r.data || []) }));
+}
+
+async function loadRawSlot(slotKey) {
+    const str = await localforage.getItem(STORAGE_KEYS[slotKey]);
+    if (!str || str === 'undefined') { delete slotRowCounts[slotKey]; delete slotMetaTags[slotKey]; return []; }
+    const rows = await parseCSV(str);
+    return Array.isArray(rows) ? rows : [];
+}
+
+function diffReport(cumA, cumB) {
+    if (!cumA || cumA.rev <= 0) return null;
+    if (!cumB || cumB.rev <= 0) return null;
+    // 🛡️ 跨年度保護鎖：若兩份報表都有明確的年份紀錄，且年份不同（如 115年 vs 114年），嚴禁相減！
+    if (cumA.yr && cumB.yr && cumA.yr !== cumB.yr) return null;
+    const rev = cumA.rev - cumB.rev;
+    if (rev <= 0) return null;
+    return {
+        yr: cumA.yr || cumB.yr || null,
+        rev,
+        gross: cumA.gross - cumB.gross,
+        opex: Math.max(0, cumA.opex - cumB.opex),
+        op: cumA.op - cumB.op,
+        preTax: cumA.preTax - cumB.preTax,
+        netIncome: cumA.netIncome - cumB.netIncome
+    };
+}
+
+function calcCoreMargin(rep) {
+    if (!rep || rep.rev <= 0) return null;
+    if (rep.op !== 0 || rep.preTax !== 0) {
+        return (rep.op / rep.rev) - ((rep.preTax - rep.netIncome) / rep.rev);
+    }
+    return rep.netIncome / rep.rev;
+}
+
+/**
+ * ⚖️ V4.9 跨年感知版：為單一股票拆解出【純Q1、純Q2、純Q3、純Q4、H1、H2】並標記真實年份 (如 115純Q2、114純Q4)
+ */
+function buildSixPeriodsForStock(s) {
+    const r1 = (s.q1 && s.q1.rev > 0) ? s.q1 : null;
+    const r2 = (s.q2 && s.q2.rev > 0) ? s.q2 : null;
+    const r3 = (s.q3 && s.q3.rev > 0) ? s.q3 : null;
+    const r4 = (s.q4 && s.q4.rev > 0) ? s.q4 : null;
+
+    const fmtLbl = (yr, name) => yr ? `${yr}${name}` : name;
+    const sameYear = (a, b) => (!a || !b || !a.yr || !b.yr || a.yr === b.yr);
+
+    const p = { PURE_Q1: null, PURE_Q2: null, PURE_Q3: null, PURE_Q4: null, H1: null, H2: null, Q3_CUM: null };
+
+    // ① 純 Q1 與 ⑤ H1
+    if (r1) p.PURE_Q1 = { ...r1, qOrder: (r1.yr || 115) * 10 + 1, label: fmtLbl(r1.yr, '純Q1') };
+    if (r2) p.H1      = { ...r2, qOrder: (r2.yr || 115) * 10 + 2, label: fmtLbl(r2.yr, 'H1累計') };
+
+    // ② 純 Q2 = 同年度 H1(r2) - Q1(r1)
+    if (r2 && r1 && sameYear(r2, r1)) {
+        const d2 = diffReport(r2, r1);
+        if (d2) p.PURE_Q2 = { ...d2, qOrder: (d2.yr || 115) * 10 + 2, label: fmtLbl(d2.yr, '純Q2') };
+    }
+
+    // ③ 純 Q3 (智慧識別 r3 是 1~9月累計 還是 7~9月單季，且檢查是否與 r2 同年度)
+    if (r3) {
+        if (r3.isPureSingle) {
+            p.PURE_Q3 = { ...r3, qOrder: (r3.yr || 114) * 10 + 3, label: fmtLbl(r3.yr, '純Q3') };
+        } else if (r2 && sameYear(r3, r2) && r3.rev > r2.rev * 1.15) {
+            p.Q3_CUM = r3;
+            const d3 = diffReport(r3, r2);
+            if (d3) p.PURE_Q3 = { ...d3, qOrder: (d3.yr || 114) * 10 + 3, label: fmtLbl(d3.yr, '純Q3') };
+        } else if (!r2 && r4 && sameYear(r4, r3) && r4.rev > r3.rev * 1.1) {
+            // 若沒有同年度的 H1，但有同年度的 Q4(全年)，代表此 r3 是前三季累計(9M)
+            p.Q3_CUM = r3;
+        } else {
+            p.PURE_Q3 = { ...r3, qOrder: (r3.yr || 114) * 10 + 3, label: fmtLbl(r3.yr, '純Q3') };
+            if (r2 && sameYear(r3, r2)) {
+                p.Q3_CUM = {
+                    yr: r3.yr || r2.yr,
+                    rev: r2.rev + r3.rev, gross: r2.gross + r3.gross, opex: r2.opex + r3.opex,
+                    op: r2.op + r3.op, preTax: r2.preTax + r3.preTax, netIncome: r2.netIncome + r3.netIncome
+                };
+            }
+        }
+    }
+
+    // ④ 純 Q4 與 ⑥ H2
+    if (r4) {
+        if (r4.isPureSingle) {
+            p.PURE_Q4 = { ...r4, qOrder: (r4.yr || 114) * 10 + 4, label: fmtLbl(r4.yr, '純Q4') };
+        } else if (p.Q3_CUM && sameYear(r4, p.Q3_CUM)) {
+            const d4 = diffReport(r4, p.Q3_CUM);
+            if (d4) p.PURE_Q4 = { ...d4, qOrder: (d4.yr || 114) * 10 + 4, label: fmtLbl(d4.yr, '純Q4') };
+        } else if (r2 && sameYear(r4, r2) && r4.rev < r2.rev * 0.9) {
+            p.PURE_Q4 = { ...r4, qOrder: (r4.yr || 114) * 10 + 4, label: fmtLbl(r4.yr, '純Q4') };
+        }
+        if (r2 && sameYear(r4, r2) && r4.rev > r2.rev) {
+            const dh2 = diffReport(r4, r2);
+            if (dh2) p.H2 = { ...dh2, qOrder: (dh2.yr || 114) * 10 + 4, label: fmtLbl(dh2.yr, 'H2累計') };
+        }
+    }
+
+    s.periods = p;
+}
+
+async function buildMarketEngine() {
+    stockMap.clear();
+    const ensureStock = (id, mkt) => {
+        let s = stockMap.get(id);
+        if (!s) {
+            s = { id, name: '-', industry: '未分類', marketType: mkt || 'listed', isFinancial: false, rawPrice: 0, parValue: 10, shares: 0, lastYearRev: 0, q1: null, q2: null, q3: null, q4: null, periods: {} };
+            stockMap.set(id, s);
+        } else if (mkt) {
+            s.marketType = mkt;
+        }
+        return s;
+    };
+
+    const ID_CANDIDATES = ['公司代號','代號','證券代號','證券代碼','股票代號','Code','SecuritiesCompanyCode'];
+
+    for (const m of MARKETS) {
+        const slot = `revly_${m.id}`;
+        const rows = await loadRawSlot(slot);
+        if (rows.length > 0) {
+            const kId  = resolveFileColKey(rows[0], ID_CANDIDATES, [{must:'代號'},{must:'代碼'}]);
+            const kCum = resolveFileColKey(rows[0], ['累計營業收入-當月累計營收','累計營業收入當月累計營收'], [{must:'當月累計營收'},{must:'累計營業收入'},{must:'累計營收'}]);
+            let cnt = 0;
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i]; const id = cleanID(r[kId]);
+                if (id && /^\d{4,6}$/.test(id)) { ensureStock(id, m.id).lastYearRev = toNum(r[kCum]); cnt++; }
+            }
+            slotRowCounts[slot] = cnt;
+        }
+    }
+
+    for (const m of MARKETS) {
+        const slot = `price_${m.id}`;
+        const rows = await loadRawSlot(slot);
+        if (rows.length > 0) {
+            const kId  = resolveFileColKey(rows[0], ID_CANDIDATES, [{must:'代號'},{must:'代碼'}]);
+            const kPri = resolveFileColKey(rows[0], ['收盤價','收盤','成交價','成交','均價','前日均價','Close','ClosingPrice'], [{must:'收盤'},{must:'成交'},{must:'均價'}]);
+            let cnt = 0;
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i]; const id = cleanID(r[kId]);
+                const p = toNum(r[kPri]);
+                if (id && /^\d{4,6}$/.test(id)) {
+                    if (p > 0) ensureStock(id, m.id).rawPrice = p;
+                    cnt++;
+                }
+            }
+            slotRowCounts[slot] = cnt;
+        }
+    }
+
+    for (const m of MARKETS) {
+        const slot = `cap_${m.id}`;
+        const rows = await loadRawSlot(slot);
+        if (rows.length > 0) {
+            const kId  = resolveFileColKey(rows[0], ID_CANDIDATES, [{must:'代號'},{must:'代碼'}]);
+            const kCap = resolveFileColKey(rows[0], ['實收資本額(元)','實收資本額','實收資本額（元）','PaidInCapital'], [{must:'實收資本額'},{must:'資本額'}]);
+            const kPar = resolveFileColKey(rows[0], ['普通股每股面額','每股面額'], [{must:'面額'}]);
+            let cnt = 0;
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i]; const id = cleanID(r[kId]);
+                if (!id || !/^\d{4,6}$/.test(id)) continue;
+                const s = ensureStock(id, m.id);
+                const parStr = kPar ? r[kPar] : '';
+                const parMatch = String(parStr).match(/[\d\.]+/);
+                const par = parMatch ? parseFloat(parMatch[0]) : 10;
+                s.parValue = (par > 0 && !isNaN(par)) ? par : 10;
+                const capVal = toNum(r[kCap]);
+                if (capVal > 0) { s.shares = capVal / s.parValue; cnt++; }
+            }
+            slotRowCounts[slot] = cnt;
+        }
+    }
+
+    // 載入 Q1, Q2(H1), Q3, Q4(全年) 四期財報並提取「真實年份 (yr)」
+    const loadQuarterByMarket = async (qPrefix, targetProp, qNum) => {
+        for (const m of MARKETS) {
+            const slot = `${qPrefix}_${m.id}`;
+            const rows = await loadRawSlot(slot);
+            if (rows.length === 0) continue;
+
+            const savedMetaYr = await localforage.getItem(`val_meta_yr_${slot}`);
+            const fname = await localforage.getItem(`val_filename_${slot}`) || '';
+            const fnameMeta = detectCSVYearQuarter('', fname, qNum);
+
+            const sRow = rows[0];
+            const kId   = resolveFileColKey(sRow, ID_CANDIDATES, [{must:'代號'},{must:'代碼'}]);
+            const kYr   = resolveFileColKey(sRow, ['年度','Year','資料年度'], [{must:'年度'}]);
+            const kRev  = resolveFileColKey(sRow, ['營業收入','營業收入合計','營業收入淨額','淨收益'], [{must:'營業收入'},{must:'淨收益'},{must:'收入合計'}]);
+            const kGp   = resolveFileColKey(sRow, ['營業毛利(毛損)淨額','營業毛利(毛損)','營業毛利'], [{must:'營業毛利'},{must:'毛利'}]);
+            const kOpex = resolveFileColKey(sRow, ['營業費用','營業費用合計'], [{must:'營業費用'}]);
+            const kOp   = resolveFileColKey(sRow, ['營業利益(損失)','營業利益','營業損益'], [{must:'營業利益'},{must:'營業損益'},{must:'營業淨利'}]);
+            const kPre  = resolveFileColKey(sRow, ['稅前淨利(淨損)','繼續營業單位稅前淨利(淨損)','繼續營業單位稅前損益','稅前淨利','稅前損益'], [{must:'稅前淨利'},{must:'稅前損益'},{must:'稅前純益'},{must:'稅前'}]);
+            const kNet  = resolveFileColKey(sRow, ['本期淨利(淨損)','本期稅後淨利(淨損)','本期損益','稅後淨利'], [{must:'本期淨利'},{must:'本期稅後淨利'},{must:'稅後淨利'},{must:'本期損益'},{must:'本期純益'}]);
+
+            let cnt = 0;
+            let detectedYr = savedMetaYr ? parseInt(savedMetaYr, 10) : fnameMeta.yr;
+
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i]; const id = cleanID(r[kId]);
+                if (!id || !/^\d{4,6}$/.test(id)) continue;
+
+                let rowYr = kYr ? parseInt(String(r[kYr]).trim(), 10) : null;
+                if (rowYr && rowYr > 1911) rowYr -= 1911;
+                const finalYr = rowYr || detectedYr || null;
+                if (finalYr && !detectedYr) detectedYr = finalYr;
+
+                const revVal = toNum(r[kRev]);
+                const gpVal  = toNum(r[kGp]);
+                const opexVal= toNum(r[kOpex]);
+                const opVal  = toNum(r[kOp]);
+                const preVal = toNum(r[kPre]);
+                const netVal = toNum(r[kNet]);
+
+                ensureStock(id, m.id)[targetProp] = {
+                    yr: finalYr,
+                    q: qNum,
+                    rev: revVal,
+                    gross: gpVal,
+                    opex: opexVal > 0 ? opexVal : (gpVal > opVal ? (gpVal - opVal) : 0),
+                    op: opVal,
+                    preTax: preVal,
+                    netIncome: netVal
+                };
+                if (revVal !== 0 || netVal !== 0 || opVal !== 0) cnt++;
+            }
+            slotRowCounts[slot] = cnt;
+            slotMetaTags[slot]  = detectedYr ? `${detectedYr}Q${qNum}` : `Q${qNum}`;
+        }
+    };
+    await Promise.all([
+        loadQuarterByMarket('q1', 'q1', 1),
+        loadQuarterByMarket('q2', 'q2', 2),
+        loadQuarterByMarket('q3', 'q3', 3),
+        loadQuarterByMarket('q4', 'q4', 4)
+    ]);
+
+    const indSet = new Set();
+    const activeIds = new Set();
+
+    for (const m of MARKETS) {
+        const slot = `rev_${m.id}`;
+        const rows = await loadRawSlot(slot);
+        if (rows.length === 0) continue;
+
+        const sRow  = rows[0];
+        const kId   = resolveFileColKey(sRow, ID_CANDIDATES, [{must:'代號'},{must:'代碼'}]);
+        const kName = resolveFileColKey(sRow, ['公司名稱','名稱','公司簡稱','CompanyName'], [{must:'名稱'},{must:'簡稱'}]);
+        const kInd  = resolveFileColKey(sRow, ['產業別','產業類別'], [{must:'產業'}]);
+        const kCum  = resolveFileColKey(sRow, ['累計營業收入-當月累計營收','累計營業收入當月累計營收'], [{must:'當月累計營收'},{must:'累計營業收入'},{must:'累計營收'}]);
+        const kMon  = resolveFileColKey(sRow, ['營業收入-當月營收','當月營收','單月營收','單月營業收入'], [{must:'當月營收', not:'累計'},{must:'單月營收'}]);
+        const kMom  = resolveFileColKey(sRow, ['營業收入-上月比較增減(%)'], [{must:'上月比較增減'},{must:'月增'}]);
+        const kYoy  = resolveFileColKey(sRow, ['營業收入-去年同月增減(%)'], [{must:'去年同月增減'},{must:'年增', not:'累計'}]);
+        const kYtd  = resolveFileColKey(sRow, ['累計營業收入-前期比較增減(%)'], [{must:'前期比較增減'},{must:'累計', not:'營收'}]);
+        const kDate = resolveFileColKey(sRow, ['資料年月','YearMonth'], [{must:'年月'}]);
+        const kNote = resolveFileColKey(sRow, ['備註','Note'], [{must:'備註'}]);
+
+        let cnt = 0;
+        let revYMTag = '';
+        for (let i = 0; i < rows.length; i++) {
+            const r = rows[i];
+            const id = cleanID(r[kId]);
+            if (!id || !/^\d{4,6}$/.test(id)) continue;
+            activeIds.add(id);
+            cnt++;
+
+            const s = ensureStock(id, m.id);
+            const rawName = r[kName] || '-';
+            s.industry = r[kInd] || (m.id === 'otc' ? '上櫃產業' : '上市產業');
+            if (s.industry) indSet.add(s.industry);
+            s.marketType = m.id;
+            s.isFinancial = id.startsWith('28') || id.startsWith('58') || id.startsWith('60') || s.industry.includes('金融');
+            s.displayName = (s.parValue && s.parValue !== 10)
+                ? (rawName.includes('*') ? rawName.replace('*', `*(${s.parValue}元)`) : `${rawName}(${s.parValue}元)`)
+                : (rawName.includes('*') ? rawName.replace('*', '*(非10元)') : rawName);
+
+            s.cumRev = toNum(r[kCum]);
+            s.cumRevBillion = s.cumRev / 100000;
+            s.monthRev = (kMon ? toNum(r[kMon]) : 0) / 100000;
+
+            let curMonth = 9;
+            if (kDate && r[kDate]) {
+                const rawYM = String(r[kDate]).trim();
+                if (!revYMTag && rawYM) revYMTag = rawYM;
+                const mMatch = rawYM.match(/\/(\d+)/) || rawYM.match(/^\d{3}(\d{2})$/);
+                if (mMatch) curMonth = parseInt(mMatch[1], 10);
+            }
+            s.revMonth = curMonth > 0 ? curMonth : 9;
+            s.multiplier = s.revMonth > 0 ? (12 / s.revMonth) : 1;
+
+            let mom = kMom ? toNum(r[kMom]) : 0;
+            let yoy = kYoy ? toNum(r[kYoy]) : 0;
+            let ytd = kYtd ? toNum(r[kYtd]) : 0;
+            if (kMom && kMom.endsWith('A') && Math.abs(mom) < 5) mom *= 100;
+            if (kYoy && kYoy.endsWith('B') && Math.abs(yoy) < 5) yoy *= 100;
+            if (kYtd && kYtd.endsWith('C') && Math.abs(ytd) < 5) ytd *= 100;
+            s.mom = mom; s.yoy = yoy; s.ytd = ytd;
+            s.note = (kNote && r[kNote]) ? String(r[kNote]).trim() : '-';
+
+            s.aiNoteObj = classifyRevenueNote(s.note, s.industry);
+
+            if (yoy >= 100 && ytd >= 100) {
+                s.tag = 'AA 股'; s.tagClass = 'tag-AA';
+            } else if (yoy >= 20 && ytd >= 20) {
+                s.tag = 'A 股'; s.tagClass = 'tag-A';
+            } else if (ytd >= 20) {
+                s.tag = 'B 股'; s.tagClass = 'tag-B';
+            } else if (yoy > 50) {
+                s.tag = '紅色 C 股'; s.tagClass = 'tag-C-red';
+            } else if (yoy >= 20) {
+                s.tag = 'C 股'; s.tagClass = 'tag-C';
+            } else {
+                s.tag = '-'; s.tagClass = 'tag-none';
+            }
+
+            buildSixPeriodsForStock(s);
+            recalcSingleStock(id);
+        }
+        slotRowCounts[slot] = cnt;
+        slotMetaTags[slot]  = revYMTag;
+    }
+
+    for (const id of stockMap.keys()) { if (!activeIds.has(id)) stockMap.delete(id); }
+
+    if (stockMap.size === 0) {
+        document.getElementById('syncStatusBadge').innerText = '⚠️ 尚無本月營收基底，請按「⚡ GAS 雲端全庫同步」或上傳 CSV';
+        renderActiveView();
+        return;
+    }
+
+    const indSel = document.getElementById('industryFilter');
+    indSel.innerHTML = '<option value="ALL">全產業板塊</option>' + [...indSet].sort().map(ind => `<option value="${esc(ind)}">${esc(ind)}</option>`).join('');
+
+    const now = new Date();
+    document.getElementById('syncStatusBadge').innerText = `🔥 戰情基準：${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')} (共 ${stockMap.size} 檔上市櫃)`;
+    renderActiveView();
+}
+
+/**
+ * ⚖️ V4.9 單一股票重算器：按「真實時間先後順序 (qOrder)」排列純單季，解決跨年順序錯亂問題
+ */
+function recalcSingleStock(id) {
+    const s = stockMap.get(id);
+    if (!s) return;
+
+    s.price = priceOverrides[id] !== undefined ? priceOverrides[id] : (s.rawPrice || 0);
+    s.estRev = (s.cumRev || 0) * (s.multiplier || 1);
+    s.estYoY = s.lastYearRev > 0 ? ((s.estRev - s.lastYearRev) / s.lastYearRev) * 100 : (s.ytd || 0);
+
+    const p = s.periods || {};
+    // 將已拆解出的純單季按真實時間序 (qOrder: 如 1144 < 1151 < 1152) 排序！
+    const pureList = [
+        p.PURE_Q1 ? { key: 'PURE_Q1', rep: p.PURE_Q1, m: calcCoreMargin(p.PURE_Q1), lbl: p.PURE_Q1.label, ord: p.PURE_Q1.qOrder || 1 } : null,
+        p.PURE_Q2 ? { key: 'PURE_Q2', rep: p.PURE_Q2, m: calcCoreMargin(p.PURE_Q2), lbl: p.PURE_Q2.label, ord: p.PURE_Q2.qOrder || 2 } : null,
+        p.PURE_Q3 ? { key: 'PURE_Q3', rep: p.PURE_Q3, m: calcCoreMargin(p.PURE_Q3), lbl: p.PURE_Q3.label, ord: p.PURE_Q3.qOrder || 3 } : null,
+        p.PURE_Q4 ? { key: 'PURE_Q4', rep: p.PURE_Q4, m: calcCoreMargin(p.PURE_Q4), lbl: p.PURE_Q4.label, ord: p.PURE_Q4.qOrder || 4 } : null
+    ].filter(x => x && x.m !== null).sort((a, b) => a.ord - b.ord);
+
+    const latestPure = pureList.length > 0 ? pureList[pureList.length - 1] : null;
+    const prevPure   = pureList.length > 1 ? pureList[pureList.length - 2] : null;
+
+    if (latestPure && prevPure && prevPure.rep.rev > 0) {
+        s.hasQoQ = true;
+        s.qoqRevDiff = (latestPure.rep.rev - prevPure.rep.rev) / 100000;
+        s.qoqRevPct  = ((latestPure.rep.rev - prevPure.rep.rev) / prevPure.rep.rev) * 100;
+    } else {
+        s.hasQoQ = false;
+        s.qoqRevDiff = 0;
+        s.qoqRevPct  = -9999;
+    }
+
+    let activeNetM = 0;
+    let activeRep  = null;
+    let periodTag  = '無財報';
+    let comparePrevM = prevPure ? prevPure.m : null;
+
+    const fallbackLatest = () => {
+        if (latestPure) {
+            activeNetM = latestPure.m; activeRep = latestPure.rep; periodTag = latestPure.lbl;
+        } else if (p.H1) {
+            activeNetM = calcCoreMargin(p.H1) || 0; activeRep = p.H1; periodTag = p.H1.label;
+        } else if (s.q4 && s.q4.rev > 0) {
+            activeNetM = calcCoreMargin(s.q4) || 0; activeRep = s.q4; periodTag = s.q4.yr ? `${s.q4.yr}全年` : '全年累計';
+        }
+    };
+
+    const mode = state.marginMode;
+    if (mode === 'AUTO_LATEST') {
+        fallbackLatest();
+    } else if (mode === 'SMOOTH_2Q') {
+        if (latestPure && prevPure) {
+            activeNetM = (latestPure.m + prevPure.m) / 2;
+            activeRep  = latestPure.rep;
+            periodTag  = `${prevPure.lbl}+${latestPure.lbl}均`;
+        } else {
+            fallbackLatest();
+        }
+    } else if (mode === 'PURE_Q1') {
+        if (p.PURE_Q1) { activeNetM = calcCoreMargin(p.PURE_Q1) || 0; activeRep = p.PURE_Q1; periodTag = p.PURE_Q1.label; comparePrevM = p.PURE_Q4 ? calcCoreMargin(p.PURE_Q4) : null; }
+        else fallbackLatest();
+    } else if (mode === 'PURE_Q2') {
+        if (p.PURE_Q2) { activeNetM = calcCoreMargin(p.PURE_Q2) || 0; activeRep = p.PURE_Q2; periodTag = p.PURE_Q2.label; comparePrevM = p.PURE_Q1 ? calcCoreMargin(p.PURE_Q1) : null; }
+        else if (p.H1) { activeNetM = calcCoreMargin(p.H1) || 0; activeRep = p.H1; periodTag = `${p.H1.label}(缺Q1)`; }
+        else fallbackLatest();
+    } else if (mode === 'PURE_Q3') {
+        if (p.PURE_Q3) { activeNetM = calcCoreMargin(p.PURE_Q3) || 0; activeRep = p.PURE_Q3; periodTag = p.PURE_Q3.label; comparePrevM = p.PURE_Q2 ? calcCoreMargin(p.PURE_Q2) : (p.H1 ? calcCoreMargin(p.H1) : null); }
+        else fallbackLatest();
+    } else if (mode === 'PURE_Q4') {
+        if (p.PURE_Q4) { activeNetM = calcCoreMargin(p.PURE_Q4) || 0; activeRep = p.PURE_Q4; periodTag = p.PURE_Q4.label; comparePrevM = p.PURE_Q3 ? calcCoreMargin(p.PURE_Q3) : null; }
+        else fallbackLatest();
+    } else if (mode === 'H1') {
+        if (p.H1) { activeNetM = calcCoreMargin(p.H1) || 0; activeRep = p.H1; periodTag = p.H1.label; comparePrevM = p.PURE_Q1 ? calcCoreMargin(p.PURE_Q1) : null; }
+        else fallbackLatest();
+    } else if (mode === 'H2') {
+        if (p.H2) { activeNetM = calcCoreMargin(p.H2) || 0; activeRep = p.H2; periodTag = p.H2.label; comparePrevM = p.H1 ? calcCoreMargin(p.H1) : null; }
+        else fallbackLatest();
+    }
+
+    s.activePeriodTag = periodTag;
+    s.estNetMargin = activeNetM * 100;
+    s.netMarginGrowth = (comparePrevM !== null && Math.abs(comparePrevM) !== 0)
+        ? ((activeNetM - comparePrevM) / Math.abs(comparePrevM)) * 100
+        : 0;
+
+    const autoEps = s.shares > 0 ? ((s.estRev * activeNetM) * 1000 / s.shares) : 0;
+    s.estEps = epsOverrides[id] !== undefined ? epsOverrides[id] : autoEps;
+
+    s.reasonablePE = Math.max(0, 10 + (s.estYoY / 10));
+    if (s.estEps > 0) {
+        s.per = s.price > 0 ? (s.price / s.estEps) : -1;
+        s.targetPrice = s.estEps * s.reasonablePE;
+        s.profitSpace = s.price > 0 ? ((s.targetPrice - s.price) / s.price) * 100 : 0;
+    } else {
+        s.per = -1; s.targetPrice = 0; s.profitSpace = 0;
+    }
+
+    const repForBe = activeRep || (s.q2 || s.q1 || { rev: 0, gross: 0, opex: 0 });
+    const isSixMonths = (periodTag.includes('H1') || periodTag.includes('H2'));
+    const isFullYear  = (periodTag.includes('全年'));
+    const qDivisor = isFullYear ? 4 : (isSixMonths ? 2 : 1);
+
+    s.curQGrossMargin = s.isFinancial ? 1.0 : (repForBe.rev > 0 ? (repForBe.gross / repForBe.rev) : 0);
+    s.curQOpex = (repForBe.opex / qDivisor) / 100000;
+
+    if (s.estEps <= 0 && s.curQGrossMargin > 0) {
+        const qBeRev = (repForBe.opex / qDivisor) / s.curQGrossMargin;
+        s.beRev = qBeRev / 100000;
+        s.monthlyBeRev = s.beRev / 3;
+        const expectedCumBe = s.monthlyBeRev * (s.revMonth || 9);
+        s.progressPct = expectedCumBe > 0 ? (s.cumRevBillion / expectedCumBe) * 100 : 0;
+    } else {
+        s.beRev = -1; s.monthlyBeRev = 0; s.progressPct = -1;
+    }
+}
+
+// 6. 四大懶人情境劇本切換器
+function applyScenario(scn) {
+    state.scenario = scn;
+    document.querySelectorAll('#scenarioBar .scenario-btn').forEach(b => b.classList.toggle('active', b.dataset.scn === scn));
+
+    if (scn === 'NONE') {
+        state.tag = 'ALL'; state.yoyMin = 'ALL'; state.pe = 'ALL'; state.aiNote = 'ALL'; state.coma = 'ALL';
+        syncControlUI(); renderActiveView();
+    } else if (scn === 'DAVIS') {
+        switchTab('main'); state.aiNote = 'EXCLUDE_ONCE'; state.pe = '0-15';
+        state.sort.main = { col: 'profitSpace', asc: false };
+        syncControlUI(); renderActiveView();
+    } else if (scn === 'VALUE') {
+        switchTab('main'); state.pe = '0-12';
+        state.sort.main = { col: 'netMarginGrowth', asc: false };
+        syncControlUI(); renderActiveView();
+    } else if (scn === 'TURNAROUND') {
+        switchTab('turnaround'); state.coma = 'AWAKE'; state.yoyMin = '20';
+        state.sort.turnaround = { col: 'progressPct', asc: false };
+        syncControlUI(); renderActiveView();
+    } else if (scn === 'TRUE100') {
+        switchTab('main'); state.yoyMin = '100'; state.aiNote = 'EXCLUDE_ONCE';
+        state.sort.main = { col: 'yoy', asc: false };
+        syncControlUI(); renderActiveView();
+    }
+}
+
+function syncControlUI() {
+    document.getElementById('yoyFilter').value = state.yoyMin;
+    document.getElementById('peFilter').value = state.pe;
+    document.getElementById('aiNoteFilter').value = state.aiNote;
+    document.getElementById('btnYoy100Quick').classList.toggle('active', state.yoyMin === '100');
+    document.querySelectorAll('#tagChips .chip').forEach(c => c.classList.toggle('active', c.dataset.tag === state.tag));
+    document.querySelectorAll('#comaChips .chip').forEach(c => c.classList.toggle('active', c.dataset.coma === state.coma));
+}
+
+// 7. 統一表格組態與渲染
+const TABLE_COLUMNS = {
+    main: [
+        { key: 'select', label: '選', sortable: false },
+        { key: 'id', label: '代號 / 產業', sortable: true, left: true },
+        { key: 'displayName', label: '名稱 / 24M與估值戰情', sortable: true, left: true },
+        { key: 'tag', label: '動能', sortable: true, left: true },
+        { key: 'price', label: '股價 ✏️', sortable: true },
+        { key: 'yoy', label: '動能 Y / 累Y / M', sortable: true },
+        { key: 'qoqRevPct', label: '季營收 QoQ 📊', sortable: true },
+        { key: 'estNetMargin', label: '本業純益% ⚖️', sortable: true },
+        { key: 'netMarginGrowth', label: '淨利成長率', sortable: true },
+        { key: 'estEps', label: '預估EPS ✏️', sortable: true },
+        { key: 'per', label: '本益比', sortable: true },
+        { key: 'reasonablePE', label: '合理PE 🎯', sortable: true },
+        { key: 'targetPrice', label: '目標估價', sortable: true },
+        { key: 'profitSpace', label: '利潤空間', sortable: true },
+        { key: 'note', label: 'AI 備註定性 💬', sortable: false, left: true, isNote: true }
+    ],
+    turnaround: [
+        { key: 'select', label: '選', sortable: false },
+        { key: 'id', label: '代號 / 產業', sortable: true, left: true },
+        { key: 'displayName', label: '名稱 / 24M與估值戰情', sortable: true, left: true },
+        { key: 'tag', label: '動能', sortable: true, left: true },
+        { key: 'price', label: '股價 ✏️', sortable: true },
+        { key: 'estEps', label: '預估EPS ✏️', sortable: true },
+        { key: 'monthRev', label: '單月營收(億)', sortable: true },
+        { key: 'yoy', label: '動能 Y / 累Y / M', sortable: true },
+        { key: 'qoqRevPct', label: '季營收 QoQ 📊', sortable: true },
+        { key: 'cumRevBillion', label: '累計營收(億)', sortable: true },
+        { key: 'curQGrossMargin', label: '毛利率 ⚖️', sortable: true },
+        { key: 'curQOpex', label: '單季費用(億)', sortable: true },
+        { key: 'beRev', label: '季兩平點(億)', sortable: true },
+        { key: 'progressPct', label: '昏迷甦醒進度', sortable: true },
+        { key: 'note', label: 'AI 備註定性 💬', sortable: false, left: true, isNote: true }
+    ]
+};
+
+function toggleYoy100Quick() {
+    const sel = document.getElementById('yoyFilter');
+    state.yoyMin = (state.yoyMin === '100') ? 'ALL' : '100';
+    sel.value = state.yoyMin;
+    document.getElementById('btnYoy100Quick').classList.toggle('active', state.yoyMin === '100');
+    renderActiveView();
+}
+
+function renderActiveView() {
+    document.getElementById('shortlistCount').innerText = selectedStocks.size;
+    if (state.tab === 'earlybird') return;
+
+    const mainList = [];
+    const turnaroundList = [];
+
+    for (const s of stockMap.values()) {
+        if (state.mkt !== 'ALL' && s.marketType !== state.mkt) continue;
+        if (state.ind !== 'ALL' && s.industry !== state.ind) continue;
+        if (state.shortlistOnly && !selectedStocks.has(s.id)) continue;
+        if (state.search && !s.id.toLowerCase().includes(state.search) && !s.displayName.toLowerCase().includes(state.search)) continue;
+
+        if (state.aiNote !== 'ALL') {
+            const nType = s.aiNoteObj ? s.aiNoteObj.type : 'NONE';
+            if (state.aiNote === 'STRUCT' && nType !== 'STRUCT') continue;
+            if (state.aiNote === 'EXCLUDE_ONCE' && nType === 'ONCE') continue;
+            if (state.aiNote === 'ONCE' && nType !== 'ONCE') continue;
+        }
+
+        if (state.yoyMin !== 'ALL') {
+            const minVal = parseFloat(state.yoyMin);
+            if (minVal === 0 || minVal === 50) { if (s.yoy <= minVal) continue; }
+            else { if (s.yoy < minVal) continue; }
+        }
+
+        if (state.tag !== 'ALL') {
+            if (state.tag === 'CLASSIFIED' && s.tag === '-') continue;
+            else if (state.tag === 'QOQ20' && (!s.hasQoQ || s.qoqRevPct < 20)) continue;
+            else if (!['CLASSIFIED','QOQ20'].includes(state.tag) && s.tag !== state.tag) continue;
+        }
+
+        if (state.scenario === 'DAVIS') {
+            if (!['AA 股','A 股'].includes(s.tag) || s.estEps <= 0 || s.profitSpace < 30) continue;
+        } else if (state.scenario === 'VALUE') {
+            if (s.ytd < 20 || s.netMarginGrowth < 20 || s.estEps <= 0) continue;
+        } else if (state.scenario === 'TRUE100') {
+            if (s.yoy < 100 || s.mom < 20) continue;
+        }
+
+        if (s.estEps <= 0) {
+            if (state.coma !== 'ALL') {
+                if (state.coma === 'AWAKE' && s.progressPct < 80) continue;
+                if (state.coma === 'MILD' && (s.progressPct < 60 || s.progressPct >= 80)) continue;
+                if (state.coma === 'SEVERE' && s.progressPct >= 60) continue;
+            }
+            turnaroundList.push(s);
+        }
+
+        if (state.pe !== 'ALL') {
+            if (s.estEps <= 0 || s.per <= 0) continue;
+            const [minP, maxP] = state.pe.split('-').map(Number);
+            if (s.per < minP || s.per > maxP) continue;
+        }
+        mainList.push(s);
+    }
+
+    document.getElementById('cnt-main').innerText = mainList.length;
+    document.getElementById('cnt-turn').innerText = turnaroundList.length;
+
+    const targetList = state.tab === 'main' ? mainList : turnaroundList;
+    const sortCfg = state.sort[state.tab];
+
+    targetList.sort((a, b) => {
+        const vA = a[sortCfg.col], vB = b[sortCfg.col];
+        if (vA === vB) return a.id.localeCompare(b.id);
+        if (typeof vA === 'string') return sortCfg.asc ? vA.localeCompare(vB) : vB.localeCompare(vA);
+        return sortCfg.asc ? vA - vB : vB - vA;
+    });
+
+    const cols = TABLE_COLUMNS[state.tab].filter(c => !c.isNote || state.showNote);
+    document.getElementById('unifiedThead').innerHTML = `<tr>` + cols.map(c => {
+        if (c.key === 'select') return `<th style="width:45px;"><input type="checkbox" onchange="toggleSelectAll(this.checked)"></th>`;
+        const arrow = sortCfg.col === c.key ? (sortCfg.asc ? ' ▲' : ' ▼') : '';
+        return `<th class="${c.left ? 'align-left' : ''}" onclick="sortByCol('${c.key}')">${c.label}${arrow}</th>`;
+    }).join('') + `</tr>`;
+
+    const tbody = document.getElementById('unifiedTbody');
+    if (targetList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="${cols.length}" class="align-center" style="padding:45px; font-weight:700; color:var(--muted);">🎯 目前篩選或自駕劇本條件下無符合標的（可點擊左上「🌐 全景自由檢視」解除限制）</td></tr>`;
+        return;
+    }
+
+    const rowsHtml = new Array(targetList.length);
+    for (let i = 0; i < targetList.length; i++) {
+        const r = targetList[i];
+        const mBadge = r.marketType === 'listed' ? '<span class="mkt-badge listed">市</span>' : '<span class="mkt-badge otc">櫃</span>';
+        const finBadge = r.isFinancial ? '<span class="mkt-badge fin">金</span>' : '';
+        const checked = selectedStocks.has(r.id) ? 'checked' : '';
+        const eId = esc(r.id), eName = esc(r.displayName);
+
+        const qoqHtml = r.hasQoQ
+            ? `<div style="font-weight:800; color:${r.qoqRevPct>=15?'var(--red)':(r.qoqRevPct<0?'var(--green)':'var(--navy)')}; cursor:pointer;" onclick="openRevDrawer('${eId}', 'quarter')">${r.qoqRevPct>=0?'+':''}${r.qoqRevPct.toFixed(1)}%</div>
+               <div style="font-size:11px; color:var(--muted);">${r.qoqRevDiff>=0?'+':''}${r.qoqRevDiff.toFixed(2)}億</div>`
+            : `<button class="btn-trend" onclick="openRevDrawer('${eId}', 'quarter')">查8Q季增</button>`;
+
+        const momYoyCell = `<td class="align-left" style="font-size:11.5px; line-height:1.35; font-weight:700;">
+            <div style="color:${r.yoy>=100?'#DC2626':(r.yoy>=20?'var(--red)':'inherit')}; font-weight:${r.yoy>=100?'900':'700'};">${r.yoy>=100?'🔥 ':''}Y ${r.yoy.toFixed(1)}%</div>
+            <div style="color:${r.ytd>=100?'var(--purple)':(r.ytd>=20?'var(--blue)':'var(--muted)')};">累Y ${r.ytd.toFixed(1)}%</div>
+            <div style="color:var(--muted); font-size:11px;">M ${r.mom.toFixed(1)}%</div>
+        </td>`;
+
+        const aiBadgeHtml = (r.aiNoteObj && r.aiNoteObj.label)
+            ? `<span class="ai-note-badge ${r.aiNoteObj.cls}">${r.aiNoteObj.label}</span>`
+            : '';
+        const noteCellHtml = state.showNote
+            ? `<td class="align-left">${aiBadgeHtml}<span class="note-trigger" data-id="${eId}">${esc(r.note)}</span></td>`
+            : '';
+
+        const commonCells = `
+            <td class="align-center"><input type="checkbox" ${checked} onchange="toggleSelectStock('${eId}', this.checked)"></td>
+            <td class="align-left">
+                <div>${mBadge}${finBadge}<a href="https://goodinfo.tw/tw/StockDetail.asp?STOCK_ID=${eId}" target="_blank" style="color:var(--navy); font-weight:800; text-decoration:none;">${eId}</a></div>
+                <div style="font-size:11px; color:var(--muted); margin-top:2px;">${esc(r.industry)}</div>
+            </td>
+            <td class="align-left">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                    <span class="stock-name-btn" onclick="openRevDrawer('${eId}', 'month')">${eName}</span>
+                    <button class="btn-trend" onclick="openRevDrawer('${eId}', 'quarter')">📊 季/月</button>
+                </div>
+                <div class="news-links" data-html2canvas-ignore="true">
+                    <a href="https://tw.stock.yahoo.com/quote/${eId}" target="_blank" class="news-a" style="background:#720e9e;">Y!</a>
+                    <a href="https://www.google.com/search?q=${eName}+${eId}+營收新聞" target="_blank" class="news-a" style="background:#4285F4;">搜</a>
+                    <a href="https://www.cnyes.com/search/news?keyword=${eName}" target="_blank" class="news-a" style="background:#1ABC9C;">鉅</a>
+                </div>
+            </td>
+            <td class="align-left"><span class="tag ${r.tagClass}">${esc(r.tag)}</span></td>
+            <td><input type="number" step="0.01" class="edit-num" value="${r.price > 0 ? r.price : ''}" placeholder="-" onchange="updateStockOverride('${eId}', 'price', this.value)"></td>
+        `;
+
+        if (state.tab === 'main') {
+            const isLoss = r.estEps <= 0;
+            const epsColor = isLoss ? 'var(--red)' : 'var(--purple)';
+            const perDisplay = r.per > 0 ? r.per.toFixed(1) : '-';
+            const targetDisplay = r.targetPrice > 0 ? r.targetPrice.toFixed(1) : '-';
+            const profitDisplay = r.profitSpace > 0 ? '+' + r.profitSpace.toFixed(1) + '%' : '-';
+
+            rowsHtml[i] = `<tr>${commonCells}
+                ${momYoyCell}
+                <td>${qoqHtml}</td>
+                <td>
+                    <div style="font-weight:800;">${r.estNetMargin.toFixed(2)}%</div>
+                    <span class="period-sub-badge">${esc(r.activePeriodTag)}</span>
+                </td>
+                <td style="font-weight:700; color:${r.netMarginGrowth>=20?'var(--red)':(r.netMarginGrowth<0?'var(--green)':'inherit')}">${r.netMarginGrowth.toFixed(1)}%</td>
+                <td><input type="number" step="0.01" class="edit-num" style="color:${epsColor};" value="${r.estEps.toFixed(2)}" onchange="updateStockOverride('${eId}', 'eps', this.value)"></td>
+                <td style="font-weight:700;">${perDisplay}</td>
+                <td style="font-weight:700; color:var(--blue);">${r.reasonablePE.toFixed(1)}</td>
+                <td style="font-weight:800; color:${isLoss?'var(--muted)':'var(--red)'};">${targetDisplay}</td>
+                <td style="font-weight:800; color:${r.profitSpace>=20?'var(--red)':'var(--muted)'}">${profitDisplay}</td>
+                ${noteCellHtml}
+            </tr>`;
+        } else {
+            const pPct = r.progressPct;
+            const barColor = pPct >= 80 ? 'var(--green)' : (pPct >= 60 ? '#F59E0B' : 'var(--red)');
+            rowsHtml[i] = `<tr>${commonCells}
+                <td><input type="number" step="0.01" class="edit-num" style="color:var(--red);" value="${r.estEps.toFixed(2)}" onchange="updateStockOverride('${eId}', 'eps', this.value)"></td>
+                <td style="font-weight:700;">${r.monthRev.toFixed(2)}</td>
+                ${momYoyCell}
+                <td>${qoqHtml}</td>
+                <td title="累計月份: ${r.revMonth}個月">${r.cumRevBillion.toFixed(2)} <span style="font-size:10px; color:var(--muted);">(${r.revMonth}M)</span></td>
+                <td>
+                    <div style="font-weight:700;">${(r.curQGrossMargin * 100).toFixed(1)}%</div>
+                    <span class="period-sub-badge">${esc(r.activePeriodTag)}</span>
+                </td>
+                <td>${r.curQOpex.toFixed(2)}</td>
+                <td style="font-weight:800; color:var(--red);" title="單月兩平約 ${(r.monthlyBeRev||0).toFixed(2)} 億">${r.beRev > 0 ? r.beRev.toFixed(2) : '-'}</td>
+                <td>
+                    <div class="prog-wrap">
+                        <div class="prog-bg"><div class="prog-fill" style="width:${Math.min(100, Math.max(0, pPct))}%; background:${barColor};"></div></div>
+                        <span style="font-weight:800; font-size:12px; color:${barColor}; min-width:48px;">${pPct >= 0 ? pPct.toFixed(1) + '%' : '未達標'}</span>
+                    </div>
+                </td>
+                ${noteCellHtml}
+            </tr>`;
+        }
+    }
+    tbody.innerHTML = rowsHtml.join('');
+}
+
+// 8. 備註浮動視窗
+function showNotePopover(targetEl, pin = false) {
+    const id = targetEl.getAttribute('data-id');
+    const s = stockMap.get(id);
+    if (!s || !s.note || s.note === '-') return;
+
+    if (pin) notePinned = true;
+    const pop = document.getElementById('notePopover');
+    document.getElementById('notePopoverTitle').innerText = `📝 ${s.id} ${s.displayName} — 營收備註`;
+    document.getElementById('notePopoverAiTag').innerHTML = (s.aiNoteObj && s.aiNoteObj.label)
+        ? `<span class="ai-note-badge ${s.aiNoteObj.cls}">${s.aiNoteObj.label}</span>`
+        : '';
+    document.getElementById('notePopoverBody').innerText = s.note;
+    pop.classList.add('show');
+
+    const rect = targetEl.getBoundingClientRect();
+    const popW = pop.offsetWidth || 340;
+    const popH = pop.offsetHeight || 120;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let left = rect.left - popW - 10;
+    if (left < 12) left = Math.min(vw - popW - 12, rect.right + 10);
+    if (left < 12) left = 12;
+
+    let top = rect.top + (rect.height / 2) - (popH / 2);
+    if (top < 12) top = 12;
+    if (top + popH > vh - 12) top = vh - popH - 12;
+
+    pop.style.left = `${left}px`;
+    pop.style.top  = `${top}px`;
+}
+
+function hideNotePopover(force = false) {
+    if (force) notePinned = false;
+    if (!notePinned) document.getElementById('notePopover').classList.remove('show');
+}
+
+// 9. 單點互動
+function updateStockOverride(id, type, val) {
+    const num = parseFloat(val);
+    if (type === 'price') {
+        if (val === '' || isNaN(num)) delete priceOverrides[id]; else priceOverrides[id] = num;
+        localStorage.setItem('val_price_overrides', JSON.stringify(priceOverrides));
+    } else if (type === 'eps') {
+        if (val === '' || isNaN(num)) delete epsOverrides[id]; else epsOverrides[id] = num;
+        localStorage.setItem('val_eps_overrides', JSON.stringify(epsOverrides));
+    }
+    recalcSingleStock(id);
+    renderActiveView();
+}
+
+function toggleSelectStock(id, checked) {
+    if (checked) selectedStocks.add(id); else selectedStocks.delete(id);
+    localStorage.setItem('val_shortlist', JSON.stringify([...selectedStocks]));
+    document.getElementById('shortlistCount').innerText = selectedStocks.size;
+    if (state.shortlistOnly) renderActiveView();
+}
+
+function toggleSelectAll(checked) {
+    document.querySelectorAll('#unifiedTbody input[type="checkbox"]').forEach(cb => {
+        cb.checked = checked;
+        const m = String(cb.getAttribute('onchange')).match(/'([^']+)'/);
+        if (m) { if (checked) selectedStocks.add(m[1]); else selectedStocks.delete(m[1]); }
+    });
+    localStorage.setItem('val_shortlist', JSON.stringify([...selectedStocks]));
+    document.getElementById('shortlistCount').innerText = selectedStocks.size;
+}
+
+function sortByCol(col) {
+    const cfg = state.sort[state.tab];
+    if (cfg.col === col) cfg.asc = !cfg.asc; else { cfg.col = col; cfg.asc = false; }
+    renderActiveView();
+}
+
+function switchTab(tab) {
+    state.tab = tab;
+    ['main','turnaround','earlybird'].forEach(t => document.getElementById(`tab-${t}`).classList.toggle('active', t === tab));
+    document.getElementById('tableWrap').style.display = tab === 'earlybird' ? 'none' : 'block';
+    document.getElementById('tacticalBar').style.display = tab === 'earlybird' ? 'none' : 'flex';
+    document.getElementById('earlybirdWrap').classList.toggle('active', tab === 'earlybird');
+    document.getElementById('comaChips').style.display = tab === 'turnaround' ? 'flex' : 'none';
+    document.getElementById('peFilter').style.display = tab === 'main' ? 'inline-block' : 'none';
+    renderActiveView();
+}
+
+// 10. 📊 戰情抽屜 (平行調閱：24M營收 + 20MA技術面 + 1Y PE/PB + ☁️ FinMind 四期損益自動補齊)
+async function openRevDrawer(id, defaultMode = 'month') {
+    const s = stockMap.get(id);
+    if (!s) return;
+
+    drawerState.currentId = id;
+    drawerState.mode = defaultMode;
+    document.getElementById('btnModeMonth').classList.toggle('active', defaultMode === 'month');
+    document.getElementById('btnModeQuarter').classList.toggle('active', defaultMode === 'quarter');
+
+    document.getElementById('drawerBackdrop').classList.add('open');
+    document.getElementById('revDrawer').classList.add('open');
+    document.getElementById('drawerStockTitle').innerText = `${s.id} ${s.displayName}`;
+    document.getElementById('drawerStockSub').innerText = `${s.industry} ｜ 基底[${s.activePeriodTag}] 預估EPS: ${s.estEps.toFixed(2)} 元 ｜ 目標價: ${s.targetPrice > 0 ? s.targetPrice.toFixed(1) : '-'} 元`;
+    document.getElementById('drawerDiagBanner').innerHTML = '';
+    document.getElementById('d-kpi-tech').innerText = '⏳ 計算 20MA...';
+    document.getElementById('d-kpi-val').innerText  = '⏳ 調閱 PB/PE...';
+    document.getElementById('drawerRevTbody').innerHTML = `<tr><td colspan="6" class="align-center" style="padding:25px; font-weight:700;">⏳ 正在從 FinMind 調閱 ${s.id} 24M營收、20MA、PE/PB 與自動補齊四期損益表...</td></tr>`;
+
+    const token = localStorage.getItem('val_finmind_token') || '';
+
+    try {
+        // (1) 抓取 42 個月營收
+        const fetchRevPromise = (async () => {
+            if (revHistoryCache.has(id)) return revHistoryCache.get(id);
+            const d = new Date(); d.setMonth(d.getMonth() - 42);
+            const startDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+            const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockMonthRevenue&data_id=${encodeURIComponent(id)}&start_date=${startDate}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+            const res = await fetch(url);
+            const json = await res.json();
+            if (!json.data || json.data.length === 0) throw new Error('查無該股歷史月營收');
+
+            const mapByYM = new Map();
+            json.data.forEach(item => {
+                const ym = `${item.revenue_year}-${String(item.revenue_month).padStart(2,'0')}`;
+                mapByYM.set(ym, item.revenue / 100000000);
+            });
+
+            const allYMs = [...mapByYM.keys()].sort();
+            const monthsSeries = allYMs.map((ym, idx) => {
+                const rev = mapByYM.get(ym);
+                const [yr, mo] = ym.split('-').map(Number);
+                const prevYM = idx > 0 ? allYMs[idx - 1] : null;
+                const lyYM = `${yr - 1}-${String(mo).padStart(2,'0')}`;
+                const prevRev = prevYM ? mapByYM.get(prevYM) : 0;
+                const lyRev = mapByYM.get(lyYM) || 0;
+                return {
+                    ym, yr, mo, rev, lyRev,
+                    mom: prevRev > 0 ? ((rev - prevRev) / prevRev) * 100 : 0,
+                    yoy: lyRev > 0 ? ((rev - lyRev) / lyRev) * 100 : 0
+                };
+            });
+
+            const last12 = monthsSeries.slice(-12);
+            const avg12Rev = last12.length > 0 ? (last12.reduce((acc, x) => acc + x.rev, 0) / last12.length) : 0;
+            const latestM = last12[last12.length - 1];
+            const lowBaseWarn = latestM && latestM.yoy >= 30 && (latestM.rev < avg12Rev * 0.9 || (latestM.lyRev > 0 && latestM.lyRev < avg12Rev * 0.62));
+
+            const qMap = new Map();
+            monthsSeries.forEach(m => {
+                const qNum = Math.ceil(m.mo / 3);
+                const qKey = `${m.yr}-Q${qNum}`;
+                if (!qMap.has(qKey)) qMap.set(qKey, { qKey, yr: m.yr, qNum, rev: 0, count: 0 });
+                const qObj = qMap.get(qKey);
+                qObj.rev += m.rev;
+                qObj.count += 1;
+            });
+
+            const allQs = [...qMap.keys()].sort();
+            const quartersSeries = allQs.map((qKey, idx) => {
+                const cur = qMap.get(qKey);
+                const prevQ = idx > 0 ? qMap.get(allQs[idx - 1]) : null;
+                const lyQ = qMap.get(`${cur.yr - 1}-Q${cur.qNum}`) || null;
+                const diffPrev = prevQ ? (cur.rev - prevQ.rev) : 0;
+                const qoq = (prevQ && prevQ.rev > 0) ? ((cur.rev - prevQ.rev) / prevQ.rev) * 100 : 0;
+                const yoy = (lyQ && lyQ.rev > 0) ? ((cur.rev - lyQ.rev) / lyQ.rev) * 100 : 0;
+                return {
+                    qKey,
+                    label: cur.count < 3 ? `${qKey.slice(2)}(${cur.count}M)` : qKey.slice(2),
+                    fullLabel: cur.count < 3 ? `${qKey} (進行中:${cur.count}個月)` : qKey,
+                    rev: cur.rev, count: cur.count, diffPrev, qoq, yoy
+                };
+            });
+
+            const bundle = { months: monthsSeries.slice(-24), quarters: quartersSeries.slice(-9), avg12Rev, lowBaseWarn };
+            revHistoryCache.set(id, bundle);
+            return bundle;
+        })();
+
+        // (2) 抓取 20MA 技術面
+        const fetchTechPromise = (async () => {
+            if (techHistoryCache.has(id)) return techHistoryCache.get(id);
+            try {
+                const d = new Date(); d.setDate(d.getDate() - 50);
+                const startDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPrice&data_id=${encodeURIComponent(id)}&start_date=${startDate}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                const res = await fetch(url);
+                const json = await res.json();
+                if (!json.data || json.data.length < 5) return null;
+
+                const prices = json.data.filter(x => x.close > 0);
+                const last20 = prices.slice(-20);
+                const last5  = prices.slice(-5);
+                const latest = prices[prices.length - 1];
+                const curPri = s.price > 0 ? s.price : latest.close;
+
+                const ma20 = last20.reduce((sum, x) => sum + x.close, 0) / last20.length;
+                const bias20 = ma20 > 0 ? ((curPri - ma20) / ma20) * 100 : 0;
+                const mv5Lots = (last5.reduce((sum, x) => sum + (x.Trading_Volume || 0), 0) / last5.length) / 1000;
+                const latestLots = (latest.Trading_Volume || 0) / 1000;
+                const volRatio = mv5Lots > 0 ? (latestLots / mv5Lots) : 1;
+
+                const techObj = { ma20, bias20, mv5Lots, latestLots, volRatio };
+                techHistoryCache.set(id, techObj);
+                return techObj;
+            } catch (e) { return null; }
+        })();
+
+        // (3) 抓取近一年官方 PE 區間與 PB
+        const fetchValPromise = (async () => {
+            if (valHistoryCache.has(id)) return valHistoryCache.get(id);
+            try {
+                const d = new Date(); d.setDate(d.getDate() - 365);
+                const startDate = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockPER&data_id=${encodeURIComponent(id)}&start_date=${startDate}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                const res = await fetch(url);
+                const json = await res.json();
+                if (!json.data || json.data.length === 0) return null;
+
+                const latest = json.data[json.data.length - 1];
+                const pbr = toNum(latest.PBR);
+                const dy  = toNum(latest.dividend_yield);
+                const curOfficialPE = toNum(latest.PER);
+
+                const validPEs = json.data.map(x => toNum(x.PER)).filter(v => v > 0 && v < 200);
+                let minPE = 0, maxPE = 0, avgPE = 0, pePosPct = -1;
+                if (validPEs.length > 0) {
+                    minPE = Math.min(...validPEs);
+                    maxPE = Math.max(...validPEs);
+                    avgPE = validPEs.reduce((a, b) => a + b, 0) / validPEs.length;
+                    const refPE = s.per > 0 ? s.per : curOfficialPE;
+                    if (refPE > 0 && maxPE > minPE) {
+                        pePosPct = Math.max(0, Math.min(100, ((refPE - minPE) / (maxPE - minPE)) * 100));
+                    }
+                }
+
+                const valObj = { pbr, dy, curOfficialPE, minPE, maxPE, avgPE, pePosPct };
+                valHistoryCache.set(id, valObj);
+                return valObj;
+            } catch (e) { return null; }
+        })();
+
+        // (4) ☁️ V4.9 新增：若本地缺少 Q1~Q4 任一季財報，自動向 FinMind 調閱近 2 年單季綜合損益表補齊！
+        const fetchStmtPromise = (async () => {
+            if (finStmtCache.has(id)) return;
+            try {
+                const d = new Date(); d.setMonth(d.getMonth() - 24);
+                const startDate = `${d.getFullYear()}-01-01`;
+                const url = `https://api.finmindtrade.com/api/v4/data?dataset=TaiwanStockFinancialStatements&data_id=${encodeURIComponent(id)}&start_date=${startDate}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+                const res = await fetch(url);
+                const json = await res.json();
+                if (!json.data || json.data.length === 0) return;
+
+                // FinMind 的 TaiwanStockFinancialStatements 每筆本身就是「純單季 (3M)」數據！
+                const byDate = {};
+                json.data.forEach(item => {
+                    if (!byDate[item.date]) byDate[item.date] = {};
+                    byDate[item.date][item.type] = toNum(item.value);
+                });
+
+                const dates = Object.keys(byDate).sort();
+                let updated = false;
+                dates.forEach(dt => {
+                    const [yrStr, moStr] = dt.split('-');
+                    const rocYr = parseInt(yrStr, 10) - 1911;
+                    const mo = parseInt(moStr, 10);
+                    const qNum = mo === 3 ? 1 : (mo === 6 ? 2 : (mo === 9 ? 3 : (mo === 12 ? 4 : 0)));
+                    if (!qNum) return;
+
+                    const m = byDate[dt];
+                    const rev = (m.Revenue || 0) / 1000; // FinMind 單位為元，轉為仟元與 MOPS 對齊
+                    const gp  = (m.GrossProfit || 0) / 1000;
+                    const opex= (m.OperatingExpenses || 0) / 1000;
+                    const op  = (m.OperatingIncome || 0) / 1000;
+                    const pre = (m.PreTaxIncome || 0) / 1000;
+                    const net = (m.IncomeAfterTaxes || m.EquityAttributableToOwnersOfParent || 0) / 1000;
+
+                    if (rev > 0) {
+                        const qKey = `q${qNum}`;
+                        // 若本地該槽位尚未載入，或 FinMind 的年份更新，自動補入（並標記 isPureSingle = true）
+                        if (!s[qKey] || !s[qKey].rev || (s[qKey].yr && rocYr >= s[qKey].yr)) {
+                            // 保留使用者若已上傳 H1 累計報表的彈性，僅補齊缺漏槽位與純單季池
+                            if (!s[qKey] || !s[qKey].rev) {
+                                s[qKey] = { yr: rocYr, q: qNum, rev, gross: gp, opex, op, preTax: pre, netIncome: net, isPureSingle: true };
+                            }
+                            if (!s.periods) s.periods = {};
+                            const pKey = `PURE_Q${qNum}`;
+                            if (!s.periods[pKey] || (s.periods[pKey].yr && rocYr >= s.periods[pKey].yr)) {
+                                s.periods[pKey] = {
+                                    yr: rocYr, q: qNum, rev, gross: gp, opex, op, preTax: pre, netIncome: net,
+                                    qOrder: rocYr * 10 + qNum, label: `${rocYr}純Q${qNum}`
+                                };
+                                updated = true;
+                            }
+                        }
+                    }
+                });
+
+                finStmtCache.add(id);
+                if (updated) {
+                    recalcSingleStock(id);
+                    renderActiveView();
+                }
+            } catch (e) {}
+        })();
+
+        await Promise.all([fetchRevPromise, fetchTechPromise, fetchValPromise, fetchStmtPromise]);
+        renderRevDrawerContent();
+    } catch (err) {
+        document.getElementById('drawerRevTbody').innerHTML = `<tr><td colspan="6" class="align-center" style="padding:25px; color:var(--red); font-weight:700;">⚠️ ${esc(err.message)}</td></tr>`;
+    }
+}
+
+function switchDrawerMode(mode) {
+    drawerState.mode = mode;
+    document.getElementById('btnModeMonth').classList.toggle('active', mode === 'month');
+    document.getElementById('btnModeQuarter').classList.toggle('active', mode === 'quarter');
+    renderRevDrawerContent();
+}
+
+function renderRevDrawerContent() {
+    const s = stockMap.get(drawerState.currentId);
+    const bundle = revHistoryCache.get(drawerState.currentId);
+    const tech = techHistoryCache.get(drawerState.currentId);
+    const val  = valHistoryCache.get(drawerState.currentId);
+    if (!s || !bundle) return;
+
+    document.getElementById('drawerStockSub').innerText = `${s.industry} ｜ 基底[${s.activePeriodTag}] 預估EPS: ${s.estEps.toFixed(2)} 元 ｜ 目標價: ${s.targetPrice > 0 ? s.targetPrice.toFixed(1) : '-'} 元`;
+
+    const alertsHtml = [];
+    const p = s.periods || {};
+    const pBadges = [
+        p.PURE_Q1 ? `${p.PURE_Q1.label}: ${(calcCoreMargin(p.PURE_Q1)*100).toFixed(1)}%` : null,
+        p.PURE_Q2 ? `${p.PURE_Q2.label}: ${(calcCoreMargin(p.PURE_Q2)*100).toFixed(1)}%` : null,
+        p.PURE_Q3 ? `${p.PURE_Q3.label}: ${(calcCoreMargin(p.PURE_Q3)*100).toFixed(1)}%` : null,
+        p.PURE_Q4 ? `${p.PURE_Q4.label}: ${(calcCoreMargin(p.PURE_Q4)*100).toFixed(1)}%` : null,
+        p.H1      ? `${p.H1.label}: ${(calcCoreMargin(p.H1)*100).toFixed(1)}%` : null,
+        p.H2      ? `${p.H2.label}: ${(calcCoreMargin(p.H2)*100).toFixed(1)}%` : null
+    ].filter(Boolean);
+    if (pBadges.length > 0) {
+        alertsHtml.push(`<div class="diag-alert info"><span>⚖️ <strong>跨年感知・各期本業純益率</strong>：${pBadges.join(' ｜ ')}</span></div>`);
+    }
+
+    if (val) {
+        const pbText = val.pbr > 0 ? `PB ${val.pbr.toFixed(2)}x` : 'PB -';
+        const peRangeText = val.minPE > 0 ? `PE ${val.minPE.toFixed(1)}~${val.maxPE.toFixed(1)}x` : `殖利率 ${val.dy.toFixed(1)}%`;
+        document.getElementById('d-kpi-val').innerHTML = `${pbText} / ${peRangeText}`;
+
+        const posLabel = val.pePosPct >= 0
+            ? (val.pePosPct <= 30 ? `💎 歷史低位階 (${val.pePosPct.toFixed(0)}%)` : (val.pePosPct <= 70 ? `⚖️ 歷史中位階 (${val.pePosPct.toFixed(0)}%)` : `🔥 歷史高位階 (${val.pePosPct.toFixed(0)}%)`))
+            : '虧損或無PE區間';
+        const rangeDesc = val.minPE > 0 ? `近1年官方PE區間 ${val.minPE.toFixed(1)}x ~ ${val.maxPE.toFixed(1)}x (均 ${val.avgPE.toFixed(1)}x)` : '近1年無正值PE紀錄';
+        alertsHtml.push(`<div class="diag-alert purple"><span>🎯 <strong>歷史估值錨點</strong>：股價淨值比 <strong>${val.pbr > 0 ? val.pbr.toFixed(2) + ' 倍' : '-'}</strong> ｜ 殖利率 <strong>${val.dy.toFixed(2)}%</strong> ｜ ${rangeDesc} ➔ <strong>${posLabel}</strong></span></div>`);
+    } else {
+        document.getElementById('d-kpi-val').innerText = s.monthlyBeRev > 0 ? `兩平 ${s.monthlyBeRev.toFixed(2)}億/月` : '無官方PB紀錄';
+    }
+
+    if (bundle.lowBaseWarn) {
+        alertsHtml.push(`<div class="diag-alert warn"><span>⚠️ <strong>低基期灌水警示</strong>：單月 YoY 雖高，但單月營收或去年基期明顯低於近 12 個月均線 (${bundle.avg12Rev.toFixed(2)}億)！</span></div>`);
+    }
+    if (s.aiNoteObj && s.aiNoteObj.type === 'ONCE') {
+        alertsHtml.push(`<div class="diag-alert warn"><span>⚠️ <strong>一次性認列提醒</strong>：備註偵測到工程/交屋/處分關鍵字，須留意次月營收續航力。</span></div>`);
+    }
+    if (tech) {
+        const bSign = tech.bias20 >= 0 ? '+' : '';
+        document.getElementById('d-kpi-lbl-3').innerText = '20MA 月線 / 乖離';
+        document.getElementById('d-kpi-tech').innerHTML = `${tech.ma20.toFixed(1)}元 <span style="color:${tech.bias20>20?'var(--red)':(tech.bias20>=0?'var(--green)':'var(--blue)')}">(${bSign}${tech.bias20.toFixed(1)}%)</span>`;
+
+        if (tech.bias20 >= 20) {
+            alertsHtml.push(`<div class="diag-alert warn"><span>🚨 <strong>技術面過熱勿追高</strong>：股價高於 20MA 月線達 ${bSign}${tech.bias20.toFixed(1)}%（5日均量 ${Math.round(tech.mv5Lots)} 張），短線乖離過大謹防拉回。</span></div>`);
+        } else if (tech.bias20 >= 0) {
+            alertsHtml.push(`<div class="diag-alert good"><span>🟢 <strong>技術面多頭健康</strong>：股價站穩 20MA 月線之上 (${bSign}${tech.bias20.toFixed(1)}%)，5日均量 ${Math.round(tech.mv5Lots)} 張（量比 ${tech.volRatio.toFixed(1)}x）。</span></div>`);
+        } else {
+            alertsHtml.push(`<div class="diag-alert info"><span>🔵 <strong>技術面月線下整理</strong>：股價目前低於 20MA 月線 (${tech.bias20.toFixed(1)}%)，建議等待站回 ${tech.ma20.toFixed(1)} 元之上再行布局。</span></div>`);
+        }
+    } else {
+        document.getElementById('d-kpi-lbl-3').innerText = '損益兩平門檻';
+        document.getElementById('d-kpi-tech').innerText = s.monthlyBeRev > 0 ? `${s.monthlyBeRev.toFixed(2)} 億/月` : '獲利標的';
+    }
+    document.getElementById('drawerDiagBanner').innerHTML = alertsHtml.join('');
+
+    const ctx = document.getElementById('revChartCanvas').getContext('2d');
+    if (revChartInstance) revChartInstance.destroy();
+
+    if (drawerState.mode === 'month') {
+        const series = bundle.months;
+        const latest = series[series.length - 1];
+        document.getElementById('d-kpi-lbl-1').innerText = '最新單月營收';
+        document.getElementById('d-kpi-lbl-2').innerText = '最新單月 YoY / MoM';
+        if (latest) {
+            document.getElementById('d-kpi-rev').innerText = `${latest.rev.toFixed(2)} 億`;
+            document.getElementById('d-kpi-yoy').innerHTML = `<span style="color:${latest.yoy>=0?'var(--red)':'var(--green)'}">Y ${latest.yoy>=0?'+':''}${latest.yoy.toFixed(1)}%</span> / M ${latest.mom.toFixed(1)}%`;
+        }
+        document.getElementById('drawerTableTitle').innerText = '📅 近 12 個月歷史明細（單位：億元）';
+
+        const last12Max = Math.max(...series.slice(-12).map(x => x.rev));
+        const datasets = [
+            {
+                type: 'bar', label: '單月營收 (億)', data: series.map(x => Number(x.rev.toFixed(2))),
+                backgroundColor: series.map(x => x.rev >= last12Max ? '#F59E0B' : '#002B5E'), borderRadius: 4, yAxisID: 'y'
+            },
+            {
+                type: 'line', label: '單月年增率 YoY (%)', data: series.map(x => Number(x.yoy.toFixed(1))),
+                borderColor: '#DC2626', backgroundColor: '#DC2626', borderWidth: 2, pointRadius: 2.5, tension: 0.25, yAxisID: 'y1'
+            }
+        ];
+        if (s.monthlyBeRev > 0) {
+            datasets.push({
+                type: 'line', label: '🎯 月損益兩平門檻 (億)',
+                data: new Array(series.length).fill(Number(s.monthlyBeRev.toFixed(2))),
+                borderColor: '#16A34A', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, yAxisID: 'y'
+            });
+        }
+
+        revChartInstance = new Chart(ctx, {
+            data: { labels: series.map(x => x.ym.slice(2)), datasets },
+            options: {
+                animation: false, responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } } },
+                scales: {
+                    y:  { type: 'linear', position: 'left', title: { display: true, text: '單月營收 (億)', font: { size: 11 } } },
+                    y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'YoY (%)', font: { size: 11 } } }
+                }
+            }
+        });
+
+        document.getElementById('drawerRevThead').innerHTML = `<tr><th class="align-left">年月</th><th>單月營收(億)</th><th>月增 MoM</th><th>年增 YoY</th><th>較12M均線</th></tr>`;
+        const recent12 = [...series.slice(-12)].reverse();
+        document.getElementById('drawerRevTbody').innerHTML = recent12.map(item => {
+            const isHigh = item.rev >= last12Max;
+            const vsAvg = bundle.avg12Rev > 0 ? `${(((item.rev - bundle.avg12Rev) / bundle.avg12Rev) * 100).toFixed(0)}%` : '-';
+            return `<tr>
+                <td class="align-left" style="font-weight:800;">${item.ym} ${isHigh ? '👑' : ''}</td>
+                <td style="font-weight:800; color:${isHigh ? 'var(--orange)' : 'var(--navy)'};">${item.rev.toFixed(2)}</td>
+                <td style="color:${item.mom>=0?'var(--red)':'var(--green)'}; font-weight:700;">${item.mom>=0?'+':''}${item.mom.toFixed(1)}%</td>
+                <td style="color:${item.yoy>=0?'var(--red)':'var(--green)'}; font-weight:700;">${item.yoy>=0?'+':''}${item.yoy.toFixed(1)}%</td>
+                <td style="font-weight:700; color:var(--muted);">${vsAvg}</td>
+            </tr>`;
+        }).join('');
+
+    } else {
+        const qSeries = bundle.quarters;
+        const latestQ = qSeries[qSeries.length - 1];
+        document.getElementById('d-kpi-lbl-1').innerText = `最新季度 (${latestQ ? latestQ.label : '-'})`;
+        document.getElementById('d-kpi-lbl-2').innerText = '季增減金額 / QoQ%';
+
+        if (latestQ) {
+            document.getElementById('d-kpi-rev').innerText = `${latestQ.rev.toFixed(2)} 億`;
+            const sign = latestQ.diffPrev >= 0 ? '+' : '';
+            document.getElementById('d-kpi-yoy').innerHTML = `<span style="color:${latestQ.qoq>=0?'var(--red)':'var(--green)'}">${sign}${latestQ.diffPrev.toFixed(2)}億 (${sign}${latestQ.qoq.toFixed(1)}%)</span>`;
+        }
+        document.getElementById('drawerTableTitle').innerText = '📊 近 8 季營收 QoQ 增減與季年增明細（單位：億元）';
+
+        const maxQRev = Math.max(...qSeries.map(x => x.rev));
+        const datasets = [
+            {
+                type: 'bar', label: '單季營收 (億)', data: qSeries.map(x => Number(x.rev.toFixed(2))),
+                backgroundColor: qSeries.map(x => x.count < 3 ? '#94A3B8' : (x.rev >= maxQRev ? '#F59E0B' : '#2563EB')),
+                borderRadius: 5, yAxisID: 'y'
+            },
+            {
+                type: 'line', label: '季增率 QoQ (%)', data: qSeries.map(x => Number(x.qoq.toFixed(1))),
+                borderColor: '#DC2626', backgroundColor: '#DC2626', borderWidth: 2.5, pointRadius: 3.5, tension: 0.2, yAxisID: 'y1'
+            },
+            {
+                type: 'line', label: '季年增 YoY (%)', data: qSeries.map(x => Number(x.yoy.toFixed(1))),
+                borderColor: '#7C3AED', backgroundColor: '#7C3AED', borderWidth: 2, borderDash: [4, 3], pointRadius: 2.5, tension: 0.2, yAxisID: 'y1'
+            }
+        ];
+        if (s.beRev > 0) {
+            datasets.push({
+                type: 'line', label: '🎯 單季損益兩平門檻 (億)',
+                data: new Array(qSeries.length).fill(Number(s.beRev.toFixed(2))),
+                borderColor: '#16A34A', borderWidth: 2, borderDash: [6, 4], pointRadius: 0, yAxisID: 'y'
+            });
+        }
+
+        revChartInstance = new Chart(ctx, {
+            data: { labels: qSeries.map(x => x.label), datasets },
+            options: {
+                animation: false, responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11, weight: 'bold' } } } },
+                scales: {
+                    y:  { type: 'linear', position: 'left', title: { display: true, text: '單季營收 (億)', font: { size: 11 } } },
+                    y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'QoQ / YoY (%)', font: { size: 11 } } }
+                }
+            }
+        });
+
+        document.getElementById('drawerRevThead').innerHTML = `<tr><th class="align-left">季度</th><th>單季營收(億)</th><th>較上季增減(億)</th><th>季增率 QoQ</th><th>季年增 YoY</th><th>季兩平達成</th></tr>`;
+        const revQs = [...qSeries].reverse();
+        document.getElementById('drawerRevTbody').innerHTML = revQs.map(q => {
+            const isHigh = q.count === 3 && q.rev >= maxQRev;
+            const dSign = q.diffPrev >= 0 ? '+' : '';
+            const qSign = q.qoq >= 0 ? '+' : '';
+            const ySign = q.yoy >= 0 ? '+' : '';
+            const beRatio = s.beRev > 0 ? `${((q.rev / s.beRev) * 100).toFixed(0)}%` : '獲利標的';
+            return `<tr>
+                <td class="align-left" style="font-weight:800;">${q.fullLabel} ${isHigh ? '👑' : ''}</td>
+                <td style="font-weight:800; color:${isHigh ? 'var(--orange)' : 'var(--navy)'};">${q.rev.toFixed(2)}</td>
+                <td style="font-weight:800; color:${q.diffPrev>=0?'var(--red)':'var(--green)'};">${dSign}${q.diffPrev.toFixed(2)} 億</td>
+                <td style="font-weight:800; color:${q.qoq>=0?'var(--red)':'var(--green)'};">${qSign}${q.qoq.toFixed(1)}%</td>
+                <td style="font-weight:700; color:${q.yoy>=0?'var(--purple)':'var(--green)'};">${ySign}${q.yoy.toFixed(1)}%</td>
+                <td style="font-weight:700;">${beRatio}</td>
+            </tr>`;
+        }).join('');
+    }
+}
+
+function closeRevDrawer() {
+    document.getElementById('drawerBackdrop').classList.remove('open');
+    document.getElementById('revDrawer').classList.remove('open');
+}
+
+// 11. 一鍵產出「📱 手機戰情小圖卡」
+async function exportMobileStockCard() {
+    const s = stockMap.get(drawerState.currentId);
+    const val = valHistoryCache.get(drawerState.currentId);
+    if (!s) return;
+
+    document.getElementById('mc-title').innerText = `${s.id} ${s.displayName}`;
+    document.getElementById('mc-sub').innerText   = `${s.industry} ｜ ${s.marketType === 'listed' ? '上市' : '上櫃'}`;
+    const tagEl = document.getElementById('mc-tag');
+    tagEl.innerText = s.tag === '-' ? '觀察股' : s.tag;
+    tagEl.className = `tag ${s.tagClass}`;
+
+    document.getElementById('mc-price').innerText = `${s.price > 0 ? s.price : '-'} ➔ ${s.targetPrice > 0 ? s.targetPrice.toFixed(1) : '-'} 元`;
+    document.getElementById('mc-space').innerText = s.profitSpace > 0 ? `+${s.profitSpace.toFixed(1)}% (PE ${s.per.toFixed(1)}x)` : `PE ${s.per > 0 ? s.per.toFixed(1) + 'x' : '虧損轉機'}`;
+    document.getElementById('mc-eps-lbl').innerText = `預估全年 EPS / 純益率(${s.activePeriodTag})`;
+    document.getElementById('mc-eps').innerText   = `${s.estEps.toFixed(2)} 元 (${s.estNetMargin.toFixed(1)}%)`;
+    document.getElementById('mc-yoy').innerText   = `單月 ${s.yoy>=0?'+':''}${s.yoy.toFixed(1)}% / 累 ${s.ytd>=0?'+':''}${s.ytd.toFixed(1)}%`;
+
+    if (val) {
+        document.getElementById('mc-pb').innerText = `${val.pbr > 0 ? val.pbr.toFixed(2) + ' 倍' : '-'} / 殖利率 ${val.dy.toFixed(1)}%`;
+        const posStr = val.pePosPct >= 0 ? `(位階${val.pePosPct.toFixed(0)}%)` : '';
+        document.getElementById('mc-perange').innerText = val.minPE > 0 ? `${val.minPE.toFixed(1)}~${val.maxPE.toFixed(1)}x ${posStr}` : '無正值PE區間';
+    } else {
+        document.getElementById('mc-pb').innerText = '未調閱';
+        document.getElementById('mc-perange').innerText = `合理PE ${s.reasonablePE.toFixed(1)}x`;
+    }
+
+    document.getElementById('mc-alerts').innerHTML = document.getElementById('drawerDiagBanner').innerHTML;
+    document.getElementById('mc-chart-img').src = document.getElementById('revChartCanvas').toDataURL('image/png');
+    document.getElementById('mc-note-title').innerText = `📝 營收備註 ${(s.aiNoteObj && s.aiNoteObj.label) ? `[${s.aiNoteObj.label}]` : ''}：`;
+    document.getElementById('mc-note-body').innerText  = s.note || '無特別備註';
+    document.getElementById('mc-foot').innerText = `顏氏價值成長分類帽 V4.9 ｜ ${new Date().toISOString().slice(0,10)}`;
+
+    const stage = document.getElementById('mobileCardStage');
+    const canvas = await html2canvas(stage, { scale: 2, backgroundColor: null });
+    const a = document.createElement('a');
+    a.download = `戰情小卡_${s.id}_${s.displayName}_${new Date().toISOString().slice(0,10)}.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+}
+
+// 12. 早鳥解碼器邏輯
+function parseMopsText() {
+    const text = document.getElementById('mopsText').value;
+    const idMatch = text.match(/(?:公司代號|公司代碼|證券代號)[\s:：]*(\d{4})/) || text.match(/本資料由.*?(\d{4})/);
+    if (idMatch) document.getElementById('eb-id').value = idMatch[1];
+
+    const extract = (kw) => { const m = text.match(new RegExp(kw + '[^\\d\\-]*?([-\\d,]+)')); return m ? m[1].replace(/,/g, '') : ''; };
+    document.getElementById('eb-in-rev').value = extract('營業收入');
+    document.getElementById('eb-in-gp').value  = extract('營業毛利');
+    document.getElementById('eb-in-op').value  = extract('營業利益');
+    document.getElementById('eb-in-pre').value = extract('稅前淨利');
+    document.getElementById('eb-in-net').value = extract('本期淨利');
+    fetchPrevQBase();
+}
+
+function fetchPrevQBase() {
+    const id = cleanID(document.getElementById('eb-id').value);
+    const baseType = document.getElementById('ebBaseType').value;
+    const statusEl = document.getElementById('eb-prev-status');
+    const isFin = id.startsWith('28') || id.startsWith('58') || id.startsWith('60');
+    const s = stockMap.get(id);
+    const p = s ? (s.periods || {}) : {};
+
+    let base = { rev: 0, gross: 0, op: 0, preTax: 0, netIncome: 0 }, found = false;
+    if (baseType === 'Q1' && p.PURE_Q1) { base = { ...p.PURE_Q1 }; found = true; }
+    else if (baseType === 'H1' && p.H1) { base = { ...p.H1 }; found = true; }
+    else if (baseType === 'Q3_CUM' && p.Q3_CUM) { base = { ...p.Q3_CUM }; found = true; }
+
+    statusEl.innerText = isFin ? `✨ 金融股 [${id}] 毛利率鎖定 100%` : (found ? `✅ 已掛載 [${id}] 歷史財報基底` : `⚠️ 庫中無 [${id}] 對應之歷史財報基底`);
+    document.getElementById('eb-base-rev').innerText = base.rev.toLocaleString();
+    document.getElementById('eb-base-gp').innerText  = (isFin ? base.rev : base.gross).toLocaleString();
+    document.getElementById('eb-base-op').innerText  = base.op.toLocaleString();
+    document.getElementById('eb-base-pre').innerText = base.preTax.toLocaleString();
+    document.getElementById('eb-base-net').innerText = base.netIncome.toLocaleString();
+    calcEB();
+}
+
+function calcEB() {
+    const id = cleanID(document.getElementById('eb-id').value);
+    const isFin = id.startsWith('28') || id.startsWith('58') || id.startsWith('60');
+    const inRev = toNum(document.getElementById('eb-in-rev').value);
+    if (isFin && inRev > 0) document.getElementById('eb-in-gp').value = inRev;
+
+    const inGp = toNum(document.getElementById('eb-in-gp').value), inOp = toNum(document.getElementById('eb-in-op').value);
+    const inPre = toNum(document.getElementById('eb-in-pre').value), inNet = toNum(document.getElementById('eb-in-net').value);
+    const bRev = toNum(document.getElementById('eb-base-rev').innerText), bGp = toNum(document.getElementById('eb-base-gp').innerText);
+    const bOp = toNum(document.getElementById('eb-base-op').innerText), bPre = toNum(document.getElementById('eb-base-pre').innerText), bNet = toNum(document.getElementById('eb-base-net').innerText);
+
+    const pRev = inRev - bRev, pGp = inGp - bGp, pOp = inOp - bOp, pPre = inPre - bPre, pNet = inNet - bNet;
+    document.getElementById('eb-pure-rev').innerText = pRev.toLocaleString();
+    document.getElementById('eb-pure-gp').innerText  = pGp.toLocaleString();
+    document.getElementById('eb-pure-op').innerText  = pOp.toLocaleString();
+    document.getElementById('eb-pure-pre').innerText = pPre.toLocaleString();
+    document.getElementById('eb-pure-net').innerText = pNet.toLocaleString();
+
+    const pct = (n, d) => d !== 0 ? ((n / d) * 100).toFixed(2) + '%' : '0%';
+    document.getElementById('eb-pct-in-gp').innerText  = pct(inGp, inRev);
+    document.getElementById('eb-pct-in-op').innerText  = pct(inOp, inRev);
+    document.getElementById('eb-pct-in-pre').innerText = pct(inPre, inRev);
+    document.getElementById('eb-pct-in-net').innerText = pct(inNet, inRev);
+    document.getElementById('eb-pct-base-gp').innerText  = pct(bGp, bRev);
+    document.getElementById('eb-pct-base-op').innerText  = pct(bOp, bRev);
+    document.getElementById('eb-pct-base-pre').innerText = pct(bPre, bRev);
+    document.getElementById('eb-pct-base-net').innerText = pct(bNet, bRev);
+
+    const pGpM = pRev !== 0 ? (pGp / pRev) * 100 : 0;
+    const pOpM = pRev !== 0 ? (pOp / pRev) * 100 : 0;
+    const pPreM = pRev !== 0 ? (pPre / pRev) * 100 : 0;
+    const pNetM = pRev !== 0 ? (pNet / pRev) * 100 : 0;
+    document.getElementById('eb-pct-gp').innerText  = pGpM.toFixed(2) + '%';
+    document.getElementById('eb-pct-op').innerText  = pOpM.toFixed(2) + '%';
+    document.getElementById('eb-pct-pre').innerText = pPreM.toFixed(2) + '%';
+    document.getElementById('eb-pct-net').innerText = pNetM.toFixed(2) + '%';
+
+    const curCoreM = pOpM - (pPreM - pNetM);
+    document.getElementById('eb-val-gm').innerText   = pGpM.toFixed(2) + '%';
+    document.getElementById('eb-val-core').innerText = curCoreM.toFixed(2) + '%';
+
+    if (bRev > 0) {
+        const bGpM = (bGp / bRev) * 100;
+        const bCoreM = ((bOp / bRev) - ((bPre - bNet) / bRev)) * 100;
+        const growth = Math.abs(bCoreM) !== 0 ? ((curCoreM - bCoreM) / Math.abs(bCoreM)) * 100 : 0;
+        document.getElementById('eb-cmp-gm').innerText   = `vs 基底: ${(pGpM - bGpM >= 0 ? '+' : '')}${(pGpM - bGpM).toFixed(2)}%`;
+        document.getElementById('eb-cmp-core').innerText = `vs 基底: ${(curCoreM - bCoreM >= 0 ? '+' : '')}${(curCoreM - bCoreM).toFixed(2)}%`;
+        document.getElementById('eb-val-growth').innerText = `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%`;
+    }
+}
+
+// 13. 匯出與初始化綁定
+function exportToImage() {
+    hideNotePopover(true);
+    html2canvas(document.getElementById('captureArea')).then(canvas => {
+        const a = document.createElement('a'); a.download = `分類帽戰情圖_${new Date().toISOString().slice(0,10)}.png`;
+        a.href = canvas.toDataURL(); a.click();
+    });
+}
+
+function exportCurrentTableCSV() {
+    const rows = [...document.querySelectorAll('#unifiedTable tr')];
+    const csv = rows.map(tr => [...tr.querySelectorAll('th,td')].slice(1).map(td => {
+        const inp = td.querySelector('input');
+        return `"${(inp ? inp.value : td.innerText).replace(/\r?\n/g, ' ').replace(/"/g, '""')}"`;
+    }).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `分類帽篩選匯出_${state.tab}_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+    initVaultUI();
+    await buildMarketEngine();
+    await refreshVaultBadges();
+
+    const gasUrl = localStorage.getItem('val_gas_url') || '';
+    const autoSync = localStorage.getItem('val_auto_sync') !== 'false';
+    const lastSyncTs = parseInt(localStorage.getItem('val_last_gas_sync_ts') || '0', 10);
+    if (gasUrl && autoSync && (stockMap.size === 0 || (Date.now() - lastSyncTs > 4 * 3600 * 1000))) {
+        syncFromGAS(true);
+    }
+
+    const tbody = document.getElementById('unifiedTbody');
+    tbody.addEventListener('mouseover', e => {
+        const trig = e.target.closest('.note-trigger');
+        if (trig && !notePinned) showNotePopover(trig, false);
+    });
+    tbody.addEventListener('mouseout', e => {
+        const trig = e.target.closest('.note-trigger');
+        if (trig && !notePinned) hideNotePopover(false);
+    });
+    tbody.addEventListener('click', e => {
+        const trig = e.target.closest('.note-trigger');
+        if (trig) { e.stopPropagation(); showNotePopover(trig, true); }
+    });
+    document.addEventListener('click', e => {
+        if (notePinned && !e.target.closest('#notePopover')) hideNotePopover(true);
+    });
+
+    document.getElementById('mktChips').addEventListener('click', e => {
+        const chip = e.target.closest('.chip'); if (!chip) return;
+        document.querySelectorAll('#mktChips .chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active'); state.mkt = chip.dataset.mkt; renderActiveView();
+    });
+    document.getElementById('tagChips').addEventListener('click', e => {
+        const chip = e.target.closest('.chip'); if (!chip) return;
+        document.querySelectorAll('#tagChips .chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active'); state.tag = chip.dataset.tag; renderActiveView();
+    });
+    document.getElementById('comaChips').addEventListener('click', e => {
+        const chip = e.target.closest('.chip'); if (!chip) return;
+        document.querySelectorAll('#comaChips .chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active'); state.coma = chip.dataset.coma; renderActiveView();
+    });
+
+    let timer = null;
+    document.getElementById('searchInput').addEventListener('input', e => {
+        clearTimeout(timer);
+        timer = setTimeout(() => { state.search = e.target.value.trim().toLowerCase(); renderActiveView(); }, 180);
+    });
+    document.getElementById('yoyFilter').addEventListener('change', e => {
+        state.yoyMin = e.target.value;
+        document.getElementById('btnYoy100Quick').classList.toggle('active', state.yoyMin === '100');
+        renderActiveView();
+    });
+    document.getElementById('marginModeFilter').addEventListener('change', e => {
+        state.marginMode = e.target.value;
+        for (const id of stockMap.keys()) recalcSingleStock(id);
+        renderActiveView();
+    });
+    document.getElementById('aiNoteFilter').addEventListener('change', e => { state.aiNote = e.target.value; renderActiveView(); });
+    document.getElementById('industryFilter').addEventListener('change', e => { state.ind = e.target.value; renderActiveView(); });
+    document.getElementById('peFilter').addEventListener('change', e => { state.pe = e.target.value; renderActiveView(); });
+    document.getElementById('toggleShortlist').addEventListener('change', e => { state.shortlistOnly = e.target.checked; renderActiveView(); });
+    document.getElementById('toggleNote').addEventListener('change', e => { state.showNote = e.target.checked; renderActiveView(); });
+});
+</script>
+</body>
+</html>
